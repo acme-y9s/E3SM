@@ -91,6 +91,7 @@ module CNStateType
      real(r8) , pointer :: peat_c_capacity_col         (:,:)   ! col target solid peat C capacity (gC/m2)
      real(r8) , pointer :: peat_layer_peat_fraction_col(:,:)   ! col geometric peat fraction of layer (0-1)
      real(r8) , pointer :: peat_c_overflow_col         (:,:)   ! col capped solid C overflow flux (gC/m2/s)
+     real(r8) , pointer :: peat_c_conservation_residual_col(:,:) ! col requested excess not exported by availability limiter (gC/m2/s)
      real(r8) , pointer :: peat_deepest_c_depth_col    (:)     ! col deepest layer containing peat C (m)
      real(r8) , pointer :: peat_zwt_running_mean_col   (:)     ! col sustained growing-season ZWT depth (m)
      real(r8) , pointer :: peat_zwt_gs_deepest_col     (:)     ! col annual deepest running-mean growing-season ZWT (m)
@@ -296,6 +297,7 @@ contains
     allocate(this%peat_c_capacity_col(begc:endc,1:nlevdecomp_full)); this%peat_c_capacity_col(:,:) = spval
     allocate(this%peat_layer_peat_fraction_col(begc:endc,1:nlevdecomp_full)); this%peat_layer_peat_fraction_col(:,:) = spval
     allocate(this%peat_c_overflow_col(begc:endc,1:nlevdecomp_full)); this%peat_c_overflow_col(:,:) = spval
+    allocate(this%peat_c_conservation_residual_col(begc:endc,1:nlevdecomp_full)); this%peat_c_conservation_residual_col(:,:) = spval
     allocate(this%peat_deepest_c_depth_col(begc:endc)); this%peat_deepest_c_depth_col(:) = spval
     allocate(this%peat_zwt_running_mean_col(begc:endc))            ; this%peat_zwt_running_mean_col(:) = spval
     allocate(this%peat_zwt_gs_deepest_col(begc:endc))              ; this%peat_zwt_gs_deepest_col(:) = spval
@@ -504,6 +506,11 @@ contains
     call hist_addfld_decomp (fname='PEAT_C_OVERFLOW', units='gC/m^2/s', type2d='levdcmp', &
          avgflag='A', long_name='capped solid peat carbon overflow flux from each layer', &
          ptr_col=this%peat_c_overflow_col, default='inactive')
+
+    this%peat_c_conservation_residual_col(begc:endc,:) = spval
+    call hist_addfld_decomp (fname='PEAT_C_CONSERVATION_RESIDUAL', units='gC/m^2/s', type2d='levdcmp', &
+         avgflag='A', long_name='requested peat excess not exported after donor-availability limiting', &
+         ptr_col=this%peat_c_conservation_residual_col, default='inactive')
 
     this%peat_deepest_c_depth_col(begc:endc) = spval
     call hist_addfld1d (fname='PEAT_DEEPEST_C_DEPTH', units='m', &
@@ -1150,6 +1157,7 @@ contains
           this%peat_c_density_col(c,1:nlevdecomp_full) = 0._r8
           this%peat_c_target_density_col(c,1:nlevdecomp_full) = 0._r8
           this%peat_c_burial_flux_col(c,1:nlevdecomp_full) = 0._r8
+          this%peat_c_conservation_residual_col(c,1:nlevdecomp_full) = 0._r8
           this%peat_zwt_running_mean_col(c) = 0._r8
           this%peat_zwt_gs_deepest_col(c) = 0._r8
           this%peat_zwt_annual_low_col(c,1:5) = 0._r8

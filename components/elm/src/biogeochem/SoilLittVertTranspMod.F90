@@ -312,6 +312,7 @@ contains
     real(r8) :: peat_target_density
     real(r8) :: peat_pool_factor
     real(r8) :: peat_excess_flux
+    real(r8) :: peat_requested_excess_flux
     real(r8) :: peat_solid_source_flux
     real(r8) :: peat_storage_demand
     real(r8) :: peat_available_flux
@@ -364,6 +365,7 @@ contains
          peat_c_capacity_diag => cnstate_vars%peat_c_capacity_col, &
          peat_layer_peat_fraction_diag => cnstate_vars%peat_layer_peat_fraction_col, &
          peat_c_overflow_diag => cnstate_vars%peat_c_overflow_col, &
+         peat_c_conservation_residual_diag => cnstate_vars%peat_c_conservation_residual_col, &
          peat_deepest_c_depth_diag => cnstate_vars%peat_deepest_c_depth_col, &
          peat_zwt_running_mean => cnstate_vars%peat_zwt_running_mean_col, &
          peat_zwt_gs_deepest => cnstate_vars%peat_zwt_gs_deepest_col, &
@@ -608,6 +610,7 @@ contains
             peat_c_capacity_diag(c,j) = max(0._r8, peat_target_density) * dzsoi_decomp(j)
             peat_layer_peat_fraction_diag(c,j) = 0._r8
             peat_c_overflow_diag(c,j) = 0._r8
+            peat_c_conservation_residual_diag(c,j) = 0._r8
             if (peat_dynamic_column(fc)) then
                peat_layer_top = max(0._r8, zsoi(j) - 0.5_r8 * dzsoi_decomp(j))
                peat_layer_bottom = peat_layer_top + dzsoi_decomp(j)
@@ -759,6 +762,7 @@ contains
             !$acc parallel loop independent gang default(present) &
             !$acc& private(c,t,j,l,s,peat_solid_source_flux,peat_storage_demand, &
             !$acc& peat_available_flux,peat_excess_flux, &
+            !$acc& peat_requested_excess_flux, &
             !$acc& peat_physical_density,peat_target_density)
             do fc = 1, num_soilc
                c = filter_soilc(fc)
@@ -786,8 +790,9 @@ contains
                              (peat_target_density - peat_physical_density) * &
                              dzsoi_decomp(l) / peat_compaction_timescale_seconds
 
-                        peat_excess_flux = max(0._r8, &
+                        peat_requested_excess_flux = max(0._r8, &
                              peat_solid_source_flux - peat_storage_demand)
+                        peat_excess_flux = peat_requested_excess_flux
 
                         ! Never export more C than the donor layer, its local
                         ! source, and its incoming flux can supply this step.
@@ -801,6 +806,8 @@ contains
                              max(peat_physical_density, epsilon)
                         peat_c_burial_flux_diag(c,l) = peat_excess_flux
                         peat_c_overflow_diag(c,l) = peat_excess_flux
+                        peat_c_conservation_residual_diag(c,l) = &
+                             max(0._r8, peat_requested_excess_flux - peat_excess_flux)
                      end if
                   end do
                end if
