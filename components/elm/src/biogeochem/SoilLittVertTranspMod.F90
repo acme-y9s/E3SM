@@ -329,6 +329,7 @@ contains
     real(r8) :: peat_layer_top
     real(r8) :: peat_layer_bottom
     real(r8) :: peat_bulk_density
+    real(r8) :: peat_peat_fraction
     real(r8) :: peat_watsat
     real(r8) :: peat_bsw
     real(r8) :: peat_sucsat
@@ -360,6 +361,10 @@ contains
          peat_c_density_diag => cnstate_vars%peat_c_density_col  , &
          peat_c_target_diag => cnstate_vars%peat_c_target_density_col, &
          peat_c_burial_flux_diag => cnstate_vars%peat_c_burial_flux_col, &
+         peat_c_capacity_diag => cnstate_vars%peat_c_capacity_col, &
+         peat_layer_peat_fraction_diag => cnstate_vars%peat_layer_peat_fraction_col, &
+         peat_c_overflow_diag => cnstate_vars%peat_c_overflow_col, &
+         peat_deepest_c_depth_diag => cnstate_vars%peat_deepest_c_depth_col, &
          peat_zwt_running_mean => cnstate_vars%peat_zwt_running_mean_col, &
          peat_zwt_gs_deepest => cnstate_vars%peat_zwt_gs_deepest_col, &
          peat_zwt_annual_low => cnstate_vars%peat_zwt_annual_low_col, &
@@ -437,6 +442,7 @@ contains
       !$acc& private(c,t,peat_zwt_sample,peat_zwt_p90,peat_zwt_history_index)
       do fc = 1,num_soilc
          c = filter_soilc(fc)
+         peat_deepest_c_depth_diag(c) = 0._r8
          if (peat_dynamic_column(fc)) then
             t = col_pp%topounit(c)
             if (top_pp%acrotelm_depth(t) > 0._r8) then
@@ -532,6 +538,7 @@ contains
          !$acc& peat_transition_integral_top, &
          !$acc& peat_transition_integral_bottom,peat_layer_top, &
          !$acc& peat_layer_bottom,peat_bulk_density,peat_watsat, &
+         !$acc& peat_peat_fraction, &
          !$acc& peat_bsw,peat_sucsat,peat_hksat)
          do fc = 1,num_soilc
             c = filter_soilc(fc)
@@ -598,6 +605,21 @@ contains
             peat_c_density_diag(c,j) = peat_physical_density
             peat_c_target_diag(c,j) = peat_target_density
             peat_c_burial_flux_diag(c,j) = 0._r8
+            peat_c_capacity_diag(c,j) = max(0._r8, peat_target_density) * dzsoi_decomp(j)
+            peat_layer_peat_fraction_diag(c,j) = 0._r8
+            peat_c_overflow_diag(c,j) = 0._r8
+            if (peat_dynamic_column(fc)) then
+               peat_layer_top = max(0._r8, zsoi(j) - 0.5_r8 * dzsoi_decomp(j))
+               peat_layer_bottom = peat_layer_top + dzsoi_decomp(j)
+               peat_peat_fraction = min(1._r8, max(0._r8, &
+                    (min(peat_layer_bottom, top_pp%peat_depth(col_pp%topounit(c))) - &
+                     peat_layer_top) / max(dzsoi_decomp(j), epsilon)))
+               peat_layer_peat_fraction_diag(c,j) = peat_peat_fraction
+               if (peat_physical_density > epsilon .and. peat_peat_fraction > 0._r8) then
+                  peat_deepest_c_depth_diag(c) = max(peat_deepest_c_depth_diag(c), &
+                       min(peat_layer_bottom, top_pp%peat_depth(col_pp%topounit(c))))
+               end if
+            end if
             if (peat_dynamic_column(fc) .and. use_jules_peat_hydraulics .and. &
                  zsoi(j) <= top_pp%peat_depth(col_pp%topounit(c))) then
                peat_bulk_density = min(peat_hydraulic_bulk_density_max, &
@@ -778,6 +800,7 @@ contains
                         som_adv_coef(c,j) = peat_excess_flux / &
                              max(peat_physical_density, epsilon)
                         peat_c_burial_flux_diag(c,l) = peat_excess_flux
+                        peat_c_overflow_diag(c,l) = peat_excess_flux
                      end if
                   end do
                end if

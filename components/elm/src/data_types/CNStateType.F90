@@ -88,6 +88,10 @@ module CNStateType
      real(r8) , pointer :: peat_c_density_col          (:,:)   ! col physical-equivalent solid peat C density (gC/m3)
      real(r8) , pointer :: peat_c_target_density_col   (:,:)   ! col target solid peat C density (gC/m3)
      real(r8) , pointer :: peat_c_burial_flux_col      (:,:)   ! col excess solid peat C burial flux (gC/m2/s)
+     real(r8) , pointer :: peat_c_capacity_col         (:,:)   ! col target solid peat C capacity (gC/m2)
+     real(r8) , pointer :: peat_layer_peat_fraction_col(:,:)   ! col geometric peat fraction of layer (0-1)
+     real(r8) , pointer :: peat_c_overflow_col         (:,:)   ! col capped solid C overflow flux (gC/m2/s)
+     real(r8) , pointer :: peat_deepest_c_depth_col    (:)     ! col deepest layer containing peat C (m)
      real(r8) , pointer :: peat_zwt_running_mean_col   (:)     ! col sustained growing-season ZWT depth (m)
      real(r8) , pointer :: peat_zwt_gs_deepest_col     (:)     ! col annual deepest running-mean growing-season ZWT (m)
      real(r8) , pointer :: peat_zwt_annual_low_col      (:,:)   ! col five-year history of annual sustained low-water depths (m)
@@ -289,6 +293,10 @@ contains
     allocate(this%peat_c_density_col  (begc:endc,1:nlevdecomp_full)) ; this%peat_c_density_col  (:,:) = spval
     allocate(this%peat_c_target_density_col(begc:endc,1:nlevdecomp_full)); this%peat_c_target_density_col(:,:) = spval
     allocate(this%peat_c_burial_flux_col(begc:endc,1:nlevdecomp_full)); this%peat_c_burial_flux_col(:,:) = spval
+    allocate(this%peat_c_capacity_col(begc:endc,1:nlevdecomp_full)); this%peat_c_capacity_col(:,:) = spval
+    allocate(this%peat_layer_peat_fraction_col(begc:endc,1:nlevdecomp_full)); this%peat_layer_peat_fraction_col(:,:) = spval
+    allocate(this%peat_c_overflow_col(begc:endc,1:nlevdecomp_full)); this%peat_c_overflow_col(:,:) = spval
+    allocate(this%peat_deepest_c_depth_col(begc:endc)); this%peat_deepest_c_depth_col(:) = spval
     allocate(this%peat_zwt_running_mean_col(begc:endc))            ; this%peat_zwt_running_mean_col(:) = spval
     allocate(this%peat_zwt_gs_deepest_col(begc:endc))              ; this%peat_zwt_gs_deepest_col(:) = spval
     allocate(this%peat_zwt_annual_low_col(begc:endc,1:5))           ; this%peat_zwt_annual_low_col(:,:) = spval
@@ -481,6 +489,26 @@ contains
     call hist_addfld_decomp (fname='PEAT_C_BURIAL_FLUX', units='gC/m^2/s', type2d='levdcmp', &
          avgflag='A', long_name='downward solid peat carbon storage-throughflow flux', &
          ptr_col=this%peat_c_burial_flux_col, default='inactive')
+
+    this%peat_c_capacity_col(begc:endc,:) = spval
+    call hist_addfld_decomp (fname='PEAT_C_CAPACITY', units='gC/m^2', type2d='levdcmp', &
+         avgflag='A', long_name='target solid peat carbon capacity of each fixed layer', &
+         ptr_col=this%peat_c_capacity_col, default='inactive')
+
+    this%peat_layer_peat_fraction_col(begc:endc,:) = spval
+    call hist_addfld_decomp (fname='PEAT_LAYER_PEAT_FRACTION', units='1', type2d='levdcmp', &
+         avgflag='A', long_name='geometric fraction of each fixed layer within peat depth', &
+         ptr_col=this%peat_layer_peat_fraction_col, default='inactive')
+
+    this%peat_c_overflow_col(begc:endc,:) = spval
+    call hist_addfld_decomp (fname='PEAT_C_OVERFLOW', units='gC/m^2/s', type2d='levdcmp', &
+         avgflag='A', long_name='capped solid peat carbon overflow flux from each layer', &
+         ptr_col=this%peat_c_overflow_col, default='inactive')
+
+    this%peat_deepest_c_depth_col(begc:endc) = spval
+    call hist_addfld1d (fname='PEAT_DEEPEST_C_DEPTH', units='m', &
+         avgflag='A', long_name='depth of deepest fixed layer containing solid peat carbon', &
+         ptr_col=this%peat_deepest_c_depth_col, default='inactive')
 
     this%peat_zwt_running_mean_col(begc:endc) = spval
     call hist_addfld1d (fname='PEAT_ZWT_RUNMEAN', units='m', &
