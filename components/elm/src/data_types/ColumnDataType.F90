@@ -199,6 +199,7 @@ module ColumnDataType
     real(r8), pointer :: fuelc                (:)    => null() ! fuel avalability factor for Reg.C (0-1)
     real(r8), pointer :: fuelc_crop           (:)    => null() ! fuel avalability factor for Reg.A (0-1)
     real(r8), pointer :: decomp_cpools_vr     (:,:,:)=> null() ! (gC/m3) vertically-resolved decomposing (litter, cwd, soil) c pools
+    real(r8), pointer :: peat_deep_reservoir_c (:,:) => null() ! (gC/m2) deep effective peat reservoir by decomposition pool
     real(r8), pointer :: ctrunc_vr            (:,:)  => null() ! (gC/m3) vertically-resolved column-level sink for C truncation
     real(r8), pointer :: frootc               (:)    => null() ! (gC/m2) column-level C pool for fine root
     real(r8), pointer :: seedc                (:)    => null() ! (gC/m2) column-level pool for seeding new Patches
@@ -251,6 +252,7 @@ module ColumnDataType
   !-----------------------------------------------------------------------
   type, public :: column_nitrogen_state
     real(r8), pointer :: decomp_npools_vr         (:,:,:) => null() ! (gN/m3) vertically-resolved decomposing (litter, cwd, soil) N pools
+    real(r8), pointer :: peat_deep_reservoir_n     (:)    => null() ! (gN/m2) deep effective peat reservoir
     real(r8), pointer :: decomp_npools            (:,:)   => null() ! (gN/m2)  decomposing (litter, cwd, soil) N pools
     real(r8), pointer :: decomp_npools_1m         (:,:)   => null() ! (gN/m2)  diagnostic: decomposing (litter, cwd, soil) N pools to 1 meter
     real(r8), pointer :: ntrunc_vr                (:,:)   => null() ! (gN/m3) vertically-resolved column-level sink for N truncation
@@ -346,6 +348,7 @@ module ColumnDataType
   !-----------------------------------------------------------------------
   type, public :: column_phosphorus_state
     real(r8), pointer :: decomp_ppools_vr         (:,:,:)  => null() ! (gP/m3) vertically-resolved decomposing (litter, cwd, soil) P pools
+    real(r8), pointer :: peat_deep_reservoir_p     (:)     => null() ! (gP/m2) deep effective peat reservoir
     real(r8), pointer :: solutionp_vr             (:,:)    => null() ! (gP/m3) vertically-resolved soil solution P
     real(r8), pointer :: labilep_vr               (:,:)    => null() ! (gP/m3) vertically-resolved soil labile mineral P
     real(r8), pointer :: secondp_vr               (:,:)    => null() ! (gP/m3) vertically-resolved soil secondary mineralP
@@ -2192,6 +2195,7 @@ contains
     allocate(this%totsomc_end          (begc:endc))     ; this%totsomc_end          (:)     = spval
     allocate(this%cropseedc_deficit    (begc:endc))     ; this%cropseedc_deficit    (:)     = spval
     allocate(this%decomp_cpools_vr (begc:endc,1:nlevdecomp_full,1:ndecomp_pools)) ; this%decomp_cpools_vr (:,:,:) = spval
+    allocate(this%peat_deep_reservoir_c(begc:endc,1:ndecomp_pools)); this%peat_deep_reservoir_c(:,:) = 0._r8
     allocate(this%ctrunc_vr        (begc:endc,1:nlevdecomp_full))                 ; this%ctrunc_vr        (:,:)   = spval
     allocate(this%decomp_som2c_vr  (begc:endc,1:nlevdecomp_full))                 ; this%decomp_som2c_vr  (:,:)   = spval
     allocate(this%decomp_cpools_1m (begc:endc,1:ndecomp_pools))                   ; this%decomp_cpools_1m (:,:)   = spval
@@ -2646,7 +2650,7 @@ contains
     ! !DESCRIPTION:
     ! Read/Write column carbon state information to/from restart file.
     !
-    use elm_varctl, only : do_budgets
+    use elm_varctl, only : do_budgets, use_peatland_deep_effective_reservoir
     !
     ! !ARGUMENTS:
     class(column_carbon_state)       :: this
@@ -2678,6 +2682,20 @@ contains
     ! flags for comparing the model and restart decomposition cascades
     integer            :: decomp_cascade_state, restart_file_decomp_cascade_state
     !-----------------------------------------------------------------------
+
+    if (use_peatland_deep_effective_reservoir) then
+       do k = 1, ndecomp_pools
+          varname = 'peat_deep_reservoir_'//trim(carbon_type)//'_'// &
+               trim(decomp_cascade_con%decomp_pool_name_restart(k))
+          ptr1d => this%peat_deep_reservoir_c(:,k)
+          call restartvar(ncid=ncid, flag=flag, varname=trim(varname), xtype=ncd_double, &
+               dim1name='column', long_name='deep effective peat carbon reservoir by decomposition pool', &
+               units='gC/m2', interpinic_flag='interp', readvar=readvar, data=ptr1d)
+          if (flag == 'read' .and. .not. readvar) then
+             ptr1d(bounds%begc:bounds%endc) = 0._r8
+          end if
+       end do
+    end if
 
     if (do_budgets) then
        call restartvar(ncid=ncid, flag=flag, varname='ENDCB', xtype=ncd_double,  &
@@ -3390,6 +3408,7 @@ contains
     !-----------------------------------------------------------------------
 
     allocate(this%decomp_npools_vr      (begc:endc,1:nlevdecomp_full,1:ndecomp_pools)) ; this%decomp_npools_vr(:,:,:) = spval
+    allocate(this%peat_deep_reservoir_n  (begc:endc)); this%peat_deep_reservoir_n(:) = 0._r8
     allocate(this%ntrunc_vr             (begc:endc,1:nlevdecomp_full))   ; this%ntrunc_vr             (:,:) = spval
     allocate(this%sminn_vr              (begc:endc,1:nlevdecomp_full))   ; this%sminn_vr              (:,:) = spval
     allocate(this%smin_no3_vr           (begc:endc,1:nlevdecomp_full))   ; this%smin_no3_vr           (:,:) = spval
@@ -3874,6 +3893,7 @@ contains
     ! !DESCRIPTION:
     ! Read/write CN restart data for nitrogen state
     !
+    use elm_varctl, only : use_peatland_deep_effective_reservoir
     ! !ARGUMENTS:
     class (column_nitrogen_state)              :: this
     type(bounds_type)          , intent(in)    :: bounds
@@ -3898,6 +3918,15 @@ contains
     ! flags for comparing the model and restart decomposition cascades
     integer            :: decomp_cascade_state, restart_file_decomp_cascade_state
     !------------------------------------------------------------------------
+
+    if (use_peatland_deep_effective_reservoir) then
+       call restartvar(ncid=ncid, flag=flag, varname='peat_deep_reservoir_n', xtype=ncd_double, &
+            dim1name='column', long_name='deep effective peat nitrogen reservoir', units='gN/m2', &
+            interpinic_flag='interp', readvar=readvar, data=this%peat_deep_reservoir_n)
+       if (flag == 'read' .and. .not. readvar) then
+          this%peat_deep_reservoir_n(bounds%begc:bounds%endc) = 0._r8
+       end if
+    end if
 
     ! sminn
     if (use_vertsoilc) then
@@ -4690,6 +4719,7 @@ contains
     allocate(this%totpftp              (begc:endc))                   ; this%totpftp              (:)   = spval
     allocate(this%totvegp              (begc:endc))                   ; this%totvegp              (:)   = spval
     allocate(this%decomp_ppools_vr     (begc:endc,1:nlevdecomp_full,1:ndecomp_pools)); this%decomp_ppools_vr(:,:,:)= spval
+    allocate(this%peat_deep_reservoir_p (begc:endc)); this%peat_deep_reservoir_p(:) = 0._r8
     allocate(this%begpb                (begc:endc))                   ; this%begpb                (:)   = spval
     allocate(this%endpb                (begc:endc))                   ; this%endpb                (:)   = spval
     allocate(this%errpb                (begc:endc))                   ; this%errpb                (:)   = spval
@@ -4989,6 +5019,7 @@ contains
     ! !DESCRIPTION:
     ! Read/write vegetation-level phosphorus state restart data
     !
+    use elm_varctl, only : use_peatland_deep_effective_reservoir
     ! !ARGUMENTS:
     class (column_phosphorus_state)            :: this
     type(bounds_type)          , intent(in)    :: bounds
@@ -5082,6 +5113,15 @@ contains
             long_name='',  units='', fill_value=spval, &
             interpinic_flag='interp' , readvar=readvar, data=ptr1d)
 
+    end if
+
+    if (use_peatland_deep_effective_reservoir) then
+       call restartvar(ncid=ncid, flag=flag, varname='peat_deep_reservoir_p', xtype=ncd_double, &
+            dim1name='column', long_name='deep effective peat phosphorus reservoir', units='gP/m2', &
+            interpinic_flag='interp', readvar=readvar, data=this%peat_deep_reservoir_p)
+       if (flag == 'read' .and. .not. readvar) then
+          this%peat_deep_reservoir_p(bounds%begc:bounds%endc) = 0._r8
+       end if
     end if
 
     ! decomposing P pools

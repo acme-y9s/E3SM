@@ -1017,6 +1017,13 @@ and conservative downward transport. This option is independent of the
 peatland compaction-profile control and requires peatland vertical transport.
 </entry>
 
+<entry id="use_peatland_deep_effective_reservoir" type="logical" category="physics"
+       group="elm_inparm" valid_values="" value=".false.">
+If TRUE, retain peat carbon that exceeds the deepest fixed soil-layer capacity
+in a restartable effective deep reservoir. This option requires
+use_peatland_fixed_grid_capacity.
+</entry>
+
 <entry id="use_jules_peat_hydraulics" type="logical" category="physics"
        group="elm_inparm" valid_values="" value=".false.">
 If TRUE, derive peatland porosity, Clapp-Hornberger b, saturated suction,
