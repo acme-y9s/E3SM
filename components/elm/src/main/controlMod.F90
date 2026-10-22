@@ -76,6 +76,7 @@ module controlMod
                         use_prognostic_moss_water, &
                         use_peatland_vertical_transport, &
                         use_peatland_compaction_profile, &
+                        use_peatland_fixed_grid_capacity, &
                         use_jules_peat_hydraulics, &
                         use_deep_soil_heating, soil_heating_reference_file, &
                         soil_heating_stream_year_first, soil_heating_stream_year_last, &
@@ -414,7 +415,8 @@ contains
     namelist /elm_inparm/ use_humhol, use_fen_bog_drainage, use_peatland_roots, &
          use_moss_capillary_nutrients, use_prognostic_moss_water, &
          use_peatland_vertical_transport, &
-         use_peatland_compaction_profile, use_jules_peat_hydraulics, &
+         use_peatland_compaction_profile, use_peatland_fixed_grid_capacity, &
+         use_jules_peat_hydraulics, &
          use_deep_soil_heating, &
          soil_heating_reference_file, soil_heating_stream_year_first, &
          soil_heating_stream_year_last, soil_heating_model_year_align, &
@@ -1227,6 +1229,7 @@ contains
     call mpi_bcast (use_prognostic_moss_water, 1, MPI_LOGICAL, 0, mpicom, ier)
     call mpi_bcast (use_peatland_vertical_transport, 1, MPI_LOGICAL, 0, mpicom, ier)
     call mpi_bcast (use_peatland_compaction_profile, 1, MPI_LOGICAL, 0, mpicom, ier)
+    call mpi_bcast (use_peatland_fixed_grid_capacity, 1, MPI_LOGICAL, 0, mpicom, ier)
     call mpi_bcast (use_jules_peat_hydraulics, 1, MPI_LOGICAL, 0, mpicom, ier)
     call mpi_bcast (use_deep_soil_heating, 1, MPI_LOGICAL, 0, mpicom, ier)
     call mpi_bcast (soil_heating_reference_file, len(soil_heating_reference_file), MPI_CHARACTER, 0, mpicom, ier)
@@ -1244,6 +1247,7 @@ contains
     !$acc update device(use_moss_capillary_nutrients)
     !$acc update device(use_prognostic_moss_water)
     !$acc update device(use_peatland_compaction_profile)
+    !$acc update device(use_peatland_fixed_grid_capacity)
     !$acc update device(use_jules_peat_hydraulics)
 
     if ((use_cn .or. use_fates) .and. use_vertsoilc) then
@@ -1274,6 +1278,10 @@ contains
     end if
     if (use_peatland_compaction_profile .and. .not. use_peatland_vertical_transport) then
        call endrun(msg=' ERROR: use_peatland_compaction_profile=.true. requires '//&
+            'use_peatland_vertical_transport=.true.'//errMsg(__FILE__, __LINE__))
+    end if
+    if (use_peatland_fixed_grid_capacity .and. .not. use_peatland_vertical_transport) then
+       call endrun(msg=' ERROR: use_peatland_fixed_grid_capacity=.true. requires '//&
             'use_peatland_vertical_transport=.true.'//errMsg(__FILE__, __LINE__))
     end if
     if (use_jules_peat_hydraulics .and. .not. use_peatland_compaction_profile) then

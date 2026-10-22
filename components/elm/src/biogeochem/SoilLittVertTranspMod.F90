@@ -9,6 +9,7 @@ module SoilLittVertTranspMod
   use elm_varctl             , only : use_microbe_methane
   use elm_varctl             , only : use_peatland_vertical_transport
   use elm_varctl             , only : use_peatland_compaction_profile
+  use elm_varctl             , only : use_peatland_fixed_grid_capacity
   use elm_varctl             , only : use_jules_peat_hydraulics
   use elm_varctl             , only : use_microbe_aqueous_transport
   use elm_varcon             , only : secspday
@@ -766,7 +767,7 @@ contains
             !$acc& peat_physical_density,peat_target_density)
             do fc = 1, num_soilc
                c = filter_soilc(fc)
-               if (peat_dynamic_column(fc) .and. &
+               if (use_peatland_fixed_grid_capacity .and. peat_dynamic_column(fc) .and. &
                     max(altmax(c), altmax_lastyear(c)) > &
                     max_altdepth_cryoturbation) then
                   t = col_pp%topounit(c)

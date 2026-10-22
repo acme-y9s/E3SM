@@ -126,6 +126,7 @@ attributes from the config_cache.xml file (with keys converted to upper-case).
 <use_prognostic_moss_water>.false.</use_prognostic_moss_water>
 <use_peatland_vertical_transport>.false.</use_peatland_vertical_transport>
 <use_peatland_compaction_profile>.false.</use_peatland_compaction_profile>
+<use_peatland_fixed_grid_capacity>.false.</use_peatland_fixed_grid_capacity>
 
 <!-- ================================================================== -->
 <!-- The default filenames are given relative to the root directory

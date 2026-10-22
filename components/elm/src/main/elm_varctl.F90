@@ -502,6 +502,7 @@ module elm_varctl
   logical, public            :: use_prognostic_moss_water    = .false.
   logical, public            :: use_peatland_vertical_transport = .false.
   logical, public            :: use_peatland_compaction_profile = .false.
+  logical, public            :: use_peatland_fixed_grid_capacity = .false.
   logical, public            :: use_jules_peat_hydraulics       = .false.
 
   ! Deep-soil warming treatment. The prognostic thermal solution is retained;

@@ -1010,6 +1010,13 @@ transport is enabled. Set it explicitly to FALSE to recover historical
 constant-with-depth peat burial.
 </entry>
 
+<entry id="use_peatland_fixed_grid_capacity" type="logical" category="physics"
+       group="elm_inparm" valid_values="" value=".false.">
+If TRUE, activate the fixed-grid peat carbon capacity and overflow diagnostics
+and conservative downward transport. This option is independent of the
+peatland compaction-profile control and requires peatland vertical transport.
+</entry>
+
 <entry id="use_jules_peat_hydraulics" type="logical" category="physics"
        group="elm_inparm" valid_values="" value=".false.">
 If TRUE, derive peatland porosity, Clapp-Hornberger b, saturated suction,
