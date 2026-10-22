@@ -526,6 +526,7 @@ module elm_varctl
   !$acc declare copyin(use_prognostic_moss_water)
   !$acc declare copyin(use_peatland_vertical_transport)
   !$acc declare copyin(use_peatland_compaction_profile)
+  !$acc declare copyin(use_peatland_fixed_grid_capacity)
   !$acc declare copyin(use_jules_peat_hydraulics)
  
   !-----------------------------------------------------------------------
