@@ -252,7 +252,7 @@ module ColumnDataType
   !-----------------------------------------------------------------------
   type, public :: column_nitrogen_state
     real(r8), pointer :: decomp_npools_vr         (:,:,:) => null() ! (gN/m3) vertically-resolved decomposing (litter, cwd, soil) N pools
-    real(r8), pointer :: peat_deep_reservoir_n     (:)    => null() ! (gN/m2) deep effective peat reservoir
+    real(r8), pointer :: peat_deep_reservoir_n     (:,:)  => null() ! (gN/m2) deep effective peat reservoir by decomposition pool
     real(r8), pointer :: decomp_npools            (:,:)   => null() ! (gN/m2)  decomposing (litter, cwd, soil) N pools
     real(r8), pointer :: decomp_npools_1m         (:,:)   => null() ! (gN/m2)  diagnostic: decomposing (litter, cwd, soil) N pools to 1 meter
     real(r8), pointer :: ntrunc_vr                (:,:)   => null() ! (gN/m3) vertically-resolved column-level sink for N truncation
@@ -348,7 +348,7 @@ module ColumnDataType
   !-----------------------------------------------------------------------
   type, public :: column_phosphorus_state
     real(r8), pointer :: decomp_ppools_vr         (:,:,:)  => null() ! (gP/m3) vertically-resolved decomposing (litter, cwd, soil) P pools
-    real(r8), pointer :: peat_deep_reservoir_p     (:)     => null() ! (gP/m2) deep effective peat reservoir
+    real(r8), pointer :: peat_deep_reservoir_p     (:,:)   => null() ! (gP/m2) deep effective peat reservoir by decomposition pool
     real(r8), pointer :: solutionp_vr             (:,:)    => null() ! (gP/m3) vertically-resolved soil solution P
     real(r8), pointer :: labilep_vr               (:,:)    => null() ! (gP/m3) vertically-resolved soil labile mineral P
     real(r8), pointer :: secondp_vr               (:,:)    => null() ! (gP/m3) vertically-resolved soil secondary mineralP
@@ -3408,7 +3408,7 @@ contains
     !-----------------------------------------------------------------------
 
     allocate(this%decomp_npools_vr      (begc:endc,1:nlevdecomp_full,1:ndecomp_pools)) ; this%decomp_npools_vr(:,:,:) = spval
-    allocate(this%peat_deep_reservoir_n  (begc:endc)); this%peat_deep_reservoir_n(:) = 0._r8
+    allocate(this%peat_deep_reservoir_n  (begc:endc,1:ndecomp_pools)); this%peat_deep_reservoir_n(:,:) = 0._r8
     allocate(this%ntrunc_vr             (begc:endc,1:nlevdecomp_full))   ; this%ntrunc_vr             (:,:) = spval
     allocate(this%sminn_vr              (begc:endc,1:nlevdecomp_full))   ; this%sminn_vr              (:,:) = spval
     allocate(this%smin_no3_vr           (begc:endc,1:nlevdecomp_full))   ; this%smin_no3_vr           (:,:) = spval
@@ -3920,12 +3920,14 @@ contains
     !------------------------------------------------------------------------
 
     if (use_peatland_deep_effective_reservoir) then
-       call restartvar(ncid=ncid, flag=flag, varname='peat_deep_reservoir_n', xtype=ncd_double, &
-            dim1name='column', long_name='deep effective peat nitrogen reservoir', units='gN/m2', &
-            interpinic_flag='interp', readvar=readvar, data=this%peat_deep_reservoir_n)
-       if (flag == 'read' .and. .not. readvar) then
-          this%peat_deep_reservoir_n(bounds%begc:bounds%endc) = 0._r8
-       end if
+       do k = 1, ndecomp_pools
+          varname = 'peat_deep_reservoir_n_'//trim(decomp_cascade_con%decomp_pool_name_restart(k))
+          ptr1d => this%peat_deep_reservoir_n(:,k)
+          call restartvar(ncid=ncid, flag=flag, varname=trim(varname), xtype=ncd_double, &
+               dim1name='column', long_name='deep effective peat nitrogen reservoir by decomposition pool', units='gN/m2', &
+               interpinic_flag='interp', readvar=readvar, data=ptr1d)
+          if (flag == 'read' .and. .not. readvar) ptr1d(bounds%begc:bounds%endc) = 0._r8
+       end do
     end if
 
     ! sminn
@@ -4719,7 +4721,7 @@ contains
     allocate(this%totpftp              (begc:endc))                   ; this%totpftp              (:)   = spval
     allocate(this%totvegp              (begc:endc))                   ; this%totvegp              (:)   = spval
     allocate(this%decomp_ppools_vr     (begc:endc,1:nlevdecomp_full,1:ndecomp_pools)); this%decomp_ppools_vr(:,:,:)= spval
-    allocate(this%peat_deep_reservoir_p (begc:endc)); this%peat_deep_reservoir_p(:) = 0._r8
+    allocate(this%peat_deep_reservoir_p (begc:endc,1:ndecomp_pools)); this%peat_deep_reservoir_p(:,:) = 0._r8
     allocate(this%begpb                (begc:endc))                   ; this%begpb                (:)   = spval
     allocate(this%endpb                (begc:endc))                   ; this%endpb                (:)   = spval
     allocate(this%errpb                (begc:endc))                   ; this%errpb                (:)   = spval
@@ -5116,12 +5118,14 @@ contains
     end if
 
     if (use_peatland_deep_effective_reservoir) then
-       call restartvar(ncid=ncid, flag=flag, varname='peat_deep_reservoir_p', xtype=ncd_double, &
-            dim1name='column', long_name='deep effective peat phosphorus reservoir', units='gP/m2', &
-            interpinic_flag='interp', readvar=readvar, data=this%peat_deep_reservoir_p)
-       if (flag == 'read' .and. .not. readvar) then
-          this%peat_deep_reservoir_p(bounds%begc:bounds%endc) = 0._r8
-       end if
+       do k = 1, ndecomp_pools
+          varname = 'peat_deep_reservoir_p_'//trim(decomp_cascade_con%decomp_pool_name_restart(k))
+          ptr1d => this%peat_deep_reservoir_p(:,k)
+          call restartvar(ncid=ncid, flag=flag, varname=trim(varname), xtype=ncd_double, &
+               dim1name='column', long_name='deep effective peat phosphorus reservoir by decomposition pool', units='gP/m2', &
+               interpinic_flag='interp', readvar=readvar, data=ptr1d)
+          if (flag == 'read' .and. .not. readvar) ptr1d(bounds%begc:bounds%endc) = 0._r8
+       end do
     end if
 
     ! decomposing P pools
