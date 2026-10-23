@@ -10,6 +10,7 @@ module SoilLittVertTranspMod
   use elm_varctl             , only : use_peatland_vertical_transport
   use elm_varctl             , only : use_peatland_compaction_profile
   use elm_varctl             , only : use_peatland_fixed_grid_capacity
+  use elm_varctl             , only : use_peatland_deep_effective_reservoir
   use elm_varctl             , only : use_jules_peat_hydraulics
   use elm_varctl             , only : use_microbe_aqueous_transport
   use elm_varcon             , only : secspday
@@ -340,6 +341,7 @@ contains
     logical  :: peat_dynamic_column(num_soilc)
     logical  :: transport_pool(num_soilc,ndecomp_pools)
     real(r8) :: peat_c_density(num_soilc,nlevdecomp)
+    real(r8) :: peat_deep_reservoir_increment
     !-----------------------------------------------------------------------
 
 
@@ -374,6 +376,11 @@ contains
          peat_zwt_annual_low_count => cnstate_vars%peat_zwt_annual_low_count_col, &
          peat_zwt_gs_p90 => cnstate_vars%peat_zwt_gs_p90_col, &
          peat_acrotelm_depth => cnstate_vars%peat_acrotelm_depth_col, &
+         peat_deep_reservoir_c => col_cs%peat_deep_reservoir_c, &
+         peat_deep_reservoir_n => col_ns%peat_deep_reservoir_n, &
+         peat_deep_reservoir_p => col_ps%peat_deep_reservoir_p, &
+         peat_deep_reservoir_c13 => c13_col_cs%peat_deep_reservoir_c, &
+         peat_deep_reservoir_c14 => c14_col_cs%peat_deep_reservoir_c, &
          peat_zwt_gs_elapsed => cnstate_vars%peat_zwt_gs_elapsed_col, &
          peat_zwt_stat_year => cnstate_vars%peat_zwt_stat_year_col, &
          zwt => soilhydrology_vars%zwt_col, &
@@ -838,11 +845,22 @@ contains
                      c_tri(fc,0,s) = -1._r8
                      r_tri(fc,0,s) = 0._r8
 
-                     conc_trcr(fc,nlevdecomp+1,s) = transport_ptr_list(i_type)%conc_ptr(c,nlevdecomp+1,s)
-                     a_tri(fc,nlevdecomp+1,s) = -1._r8
-                     b_tri(fc,nlevdecomp+1,s) = 1._r8
-                     c_tri(fc,nlevdecomp+1,s) = 0._r8
-                     r_tri(fc,nlevdecomp+1,s) = 0._r8
+                     if (use_peatland_deep_effective_reservoir) then
+                        ! Open lower boundary: material leaving the deepest
+                        ! fixed layer is accumulated in the effective reservoir.
+                        conc_trcr(fc,nlevdecomp+1,s) = 0._r8
+                        a_tri(fc,nlevdecomp+1,s) = 0._r8
+                        b_tri(fc,nlevdecomp+1,s) = 1._r8
+                        c_tri(fc,nlevdecomp+1,s) = 0._r8
+                        r_tri(fc,nlevdecomp+1,s) = 0._r8
+                     else
+                        ! Preserve the original closed lower boundary.
+                        conc_trcr(fc,nlevdecomp+1,s) = transport_ptr_list(i_type)%conc_ptr(c,nlevdecomp+1,s)
+                        a_tri(fc,nlevdecomp+1,s) = -1._r8
+                        b_tri(fc,nlevdecomp+1,s) = 1._r8
+                        c_tri(fc,nlevdecomp+1,s) = 0._r8
+                        r_tri(fc,nlevdecomp+1,s) = 0._r8
+                     end if
                   end if
                end do
             end do
@@ -983,6 +1001,42 @@ contains
                   end if
                end do
             end do
+
+            ! Transfer the net loss through the open deepest boundary into
+            ! the corresponding pool-resolved effective reservoir. The
+            ! column concentration and source arrays still contain the
+            ! pre-transport values at this point.
+            if (use_peatland_deep_effective_reservoir) then
+               !$acc parallel loop independent gang worker vector collapse(2) default(present) private(c,peat_deep_reservoir_increment)
+               do s = 1, ndecomp_pools
+                  do fc = 1, num_soilc
+                     if (transport_pool(fc,s)) then
+                        c = filter_soilc(fc)
+                        peat_deep_reservoir_increment = 0._r8
+                        do j = 1, nlevdecomp
+                           peat_deep_reservoir_increment = peat_deep_reservoir_increment + &
+                              (transport_ptr_list(i_type)%conc_ptr(c,j,s) + &
+                               transport_ptr_list(i_type)%src_ptr(c,j,s) - &
+                               conc_trcr(fc,j,s)) * dzsoi_decomp(j)
+                        end do
+                        peat_deep_reservoir_increment = max(0._r8, peat_deep_reservoir_increment)
+                        select case (i_type)
+                        case (1)
+                           peat_deep_reservoir_c(c,s) = peat_deep_reservoir_c(c,s) + peat_deep_reservoir_increment
+                        case (2)
+                           peat_deep_reservoir_n(c,s) = peat_deep_reservoir_n(c,s) + peat_deep_reservoir_increment
+                        case (3)
+                           peat_deep_reservoir_p(c,s) = peat_deep_reservoir_p(c,s) + peat_deep_reservoir_increment
+                        case (4)
+                           if (use_c13) peat_deep_reservoir_c13(c,s) = peat_deep_reservoir_c13(c,s) + peat_deep_reservoir_increment
+                           if (use_c14 .and. .not. use_c13) peat_deep_reservoir_c14(c,s) = peat_deep_reservoir_c14(c,s) + peat_deep_reservoir_increment
+                        case (5)
+                           peat_deep_reservoir_c14(c,s) = peat_deep_reservoir_c14(c,s) + peat_deep_reservoir_increment
+                        end select
+                     end if
+                  end do
+               end do
+            end if
 
             ! add post-transport concentration to calculate tendency term
             !$acc parallel loop independent gang collapse(2) default(present)
