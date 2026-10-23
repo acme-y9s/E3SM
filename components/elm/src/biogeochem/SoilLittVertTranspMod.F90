@@ -370,6 +370,11 @@ contains
          peat_c_overflow_diag => cnstate_vars%peat_c_overflow_col, &
          peat_c_conservation_residual_diag => cnstate_vars%peat_c_conservation_residual_col, &
          peat_deepest_c_depth_diag => cnstate_vars%peat_deepest_c_depth_col, &
+         peat_deep_boundary_c_flux_diag => cnstate_vars%peat_deep_boundary_c_flux_col, &
+         peat_deep_boundary_n_flux_diag => cnstate_vars%peat_deep_boundary_n_flux_col, &
+         peat_deep_boundary_p_flux_diag => cnstate_vars%peat_deep_boundary_p_flux_col, &
+         peat_deep_boundary_c13_flux_diag => cnstate_vars%peat_deep_boundary_c13_flux_col, &
+         peat_deep_boundary_c14_flux_diag => cnstate_vars%peat_deep_boundary_c14_flux_col, &
          peat_zwt_running_mean => cnstate_vars%peat_zwt_running_mean_col, &
          peat_zwt_gs_deepest => cnstate_vars%peat_zwt_gs_deepest_col, &
          peat_zwt_annual_low => cnstate_vars%peat_zwt_annual_low_col, &
@@ -453,6 +458,11 @@ contains
       do fc = 1,num_soilc
          c = filter_soilc(fc)
          peat_deepest_c_depth_diag(c) = 0._r8
+         peat_deep_boundary_c_flux_diag(c) = 0._r8
+         peat_deep_boundary_n_flux_diag(c) = 0._r8
+         peat_deep_boundary_p_flux_diag(c) = 0._r8
+         peat_deep_boundary_c13_flux_diag(c) = 0._r8
+         peat_deep_boundary_c14_flux_diag(c) = 0._r8
          if (peat_dynamic_column(fc)) then
             t = col_pp%topounit(c)
             if (top_pp%acrotelm_depth(t) > 0._r8) then
@@ -1023,15 +1033,31 @@ contains
                         select case (i_type)
                         case (1)
                            peat_deep_reservoir_c(c,s) = peat_deep_reservoir_c(c,s) + peat_deep_reservoir_increment
+                           peat_deep_boundary_c_flux_diag(c) = peat_deep_boundary_c_flux_diag(c) + &
+                                peat_deep_reservoir_increment / dtime_mod
                         case (2)
                            peat_deep_reservoir_n(c,s) = peat_deep_reservoir_n(c,s) + peat_deep_reservoir_increment
+                           peat_deep_boundary_n_flux_diag(c) = peat_deep_boundary_n_flux_diag(c) + &
+                                peat_deep_reservoir_increment / dtime_mod
                         case (3)
                            peat_deep_reservoir_p(c,s) = peat_deep_reservoir_p(c,s) + peat_deep_reservoir_increment
+                           peat_deep_boundary_p_flux_diag(c) = peat_deep_boundary_p_flux_diag(c) + &
+                                peat_deep_reservoir_increment / dtime_mod
                         case (4)
-                           if (use_c13) peat_deep_reservoir_c13(c,s) = peat_deep_reservoir_c13(c,s) + peat_deep_reservoir_increment
-                           if (use_c14 .and. .not. use_c13) peat_deep_reservoir_c14(c,s) = peat_deep_reservoir_c14(c,s) + peat_deep_reservoir_increment
+                           if (use_c13) then
+                              peat_deep_reservoir_c13(c,s) = peat_deep_reservoir_c13(c,s) + peat_deep_reservoir_increment
+                              peat_deep_boundary_c13_flux_diag(c) = peat_deep_boundary_c13_flux_diag(c) + &
+                                   peat_deep_reservoir_increment / dtime_mod
+                           end if
+                           if (use_c14 .and. .not. use_c13) then
+                              peat_deep_reservoir_c14(c,s) = peat_deep_reservoir_c14(c,s) + peat_deep_reservoir_increment
+                              peat_deep_boundary_c14_flux_diag(c) = peat_deep_boundary_c14_flux_diag(c) + &
+                                   peat_deep_reservoir_increment / dtime_mod
+                           end if
                         case (5)
                            peat_deep_reservoir_c14(c,s) = peat_deep_reservoir_c14(c,s) + peat_deep_reservoir_increment
+                           peat_deep_boundary_c14_flux_diag(c) = peat_deep_boundary_c14_flux_diag(c) + &
+                                peat_deep_reservoir_increment / dtime_mod
                         end select
                      end if
                   end do

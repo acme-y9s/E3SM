@@ -93,6 +93,11 @@ module CNStateType
      real(r8) , pointer :: peat_c_overflow_col         (:,:)   ! col capped solid C overflow flux (gC/m2/s)
      real(r8) , pointer :: peat_c_conservation_residual_col(:,:) ! col requested excess not exported by availability limiter (gC/m2/s)
      real(r8) , pointer :: peat_deepest_c_depth_col    (:)     ! col deepest layer containing peat C (m)
+     real(r8) , pointer :: peat_deep_boundary_c_flux_col   (:) ! col deepest-boundary C flux (gC/m2/s)
+     real(r8) , pointer :: peat_deep_boundary_n_flux_col   (:) ! col deepest-boundary N flux (gN/m2/s)
+     real(r8) , pointer :: peat_deep_boundary_p_flux_col   (:) ! col deepest-boundary P flux (gP/m2/s)
+     real(r8) , pointer :: peat_deep_boundary_c13_flux_col (:) ! col deepest-boundary C13 flux (gC13/m2/s)
+     real(r8) , pointer :: peat_deep_boundary_c14_flux_col (:) ! col deepest-boundary C14 flux (gC14/m2/s)
      real(r8) , pointer :: peat_zwt_running_mean_col   (:)     ! col sustained growing-season ZWT depth (m)
      real(r8) , pointer :: peat_zwt_gs_deepest_col     (:)     ! col annual deepest running-mean growing-season ZWT (m)
      real(r8) , pointer :: peat_zwt_annual_low_col      (:,:)   ! col five-year history of annual sustained low-water depths (m)
@@ -299,6 +304,11 @@ contains
     allocate(this%peat_c_overflow_col(begc:endc,1:nlevdecomp_full)); this%peat_c_overflow_col(:,:) = spval
     allocate(this%peat_c_conservation_residual_col(begc:endc,1:nlevdecomp_full)); this%peat_c_conservation_residual_col(:,:) = spval
     allocate(this%peat_deepest_c_depth_col(begc:endc)); this%peat_deepest_c_depth_col(:) = spval
+    allocate(this%peat_deep_boundary_c_flux_col(begc:endc)); this%peat_deep_boundary_c_flux_col(:) = spval
+    allocate(this%peat_deep_boundary_n_flux_col(begc:endc)); this%peat_deep_boundary_n_flux_col(:) = spval
+    allocate(this%peat_deep_boundary_p_flux_col(begc:endc)); this%peat_deep_boundary_p_flux_col(:) = spval
+    allocate(this%peat_deep_boundary_c13_flux_col(begc:endc)); this%peat_deep_boundary_c13_flux_col(:) = spval
+    allocate(this%peat_deep_boundary_c14_flux_col(begc:endc)); this%peat_deep_boundary_c14_flux_col(:) = spval
     allocate(this%peat_zwt_running_mean_col(begc:endc))            ; this%peat_zwt_running_mean_col(:) = spval
     allocate(this%peat_zwt_gs_deepest_col(begc:endc))              ; this%peat_zwt_gs_deepest_col(:) = spval
     allocate(this%peat_zwt_annual_low_col(begc:endc,1:5))           ; this%peat_zwt_annual_low_col(:,:) = spval
@@ -516,6 +526,31 @@ contains
     call hist_addfld1d (fname='PEAT_DEEPEST_C_DEPTH', units='m', &
          avgflag='A', long_name='depth of deepest fixed layer containing solid peat carbon', &
          ptr_col=this%peat_deepest_c_depth_col, default='inactive')
+
+    this%peat_deep_boundary_c_flux_col(begc:endc) = spval
+    call hist_addfld1d (fname='PEAT_DEEP_BOUNDARY_C_FLUX', units='gC/m^2/s', &
+         avgflag='A', long_name='C flux transferred through deepest fixed peat layer', &
+         ptr_col=this%peat_deep_boundary_c_flux_col, default='inactive')
+
+    this%peat_deep_boundary_n_flux_col(begc:endc) = spval
+    call hist_addfld1d (fname='PEAT_DEEP_BOUNDARY_N_FLUX', units='gN/m^2/s', &
+         avgflag='A', long_name='N flux transferred through deepest fixed peat layer', &
+         ptr_col=this%peat_deep_boundary_n_flux_col, default='inactive')
+
+    this%peat_deep_boundary_p_flux_col(begc:endc) = spval
+    call hist_addfld1d (fname='PEAT_DEEP_BOUNDARY_P_FLUX', units='gP/m^2/s', &
+         avgflag='A', long_name='P flux transferred through deepest fixed peat layer', &
+         ptr_col=this%peat_deep_boundary_p_flux_col, default='inactive')
+
+    this%peat_deep_boundary_c13_flux_col(begc:endc) = spval
+    call hist_addfld1d (fname='PEAT_DEEP_BOUNDARY_C13_FLUX', units='gC13/m^2/s', &
+         avgflag='A', long_name='C13 flux transferred through deepest fixed peat layer', &
+         ptr_col=this%peat_deep_boundary_c13_flux_col, default='inactive')
+
+    this%peat_deep_boundary_c14_flux_col(begc:endc) = spval
+    call hist_addfld1d (fname='PEAT_DEEP_BOUNDARY_C14_FLUX', units='gC14/m^2/s', &
+         avgflag='A', long_name='C14 flux transferred through deepest fixed peat layer', &
+         ptr_col=this%peat_deep_boundary_c14_flux_col, default='inactive')
 
     this%peat_zwt_running_mean_col(begc:endc) = spval
     call hist_addfld1d (fname='PEAT_ZWT_RUNMEAN', units='m', &
@@ -1158,6 +1193,11 @@ contains
           this%peat_c_target_density_col(c,1:nlevdecomp_full) = 0._r8
           this%peat_c_burial_flux_col(c,1:nlevdecomp_full) = 0._r8
           this%peat_c_conservation_residual_col(c,1:nlevdecomp_full) = 0._r8
+          this%peat_deep_boundary_c_flux_col(c) = 0._r8
+          this%peat_deep_boundary_n_flux_col(c) = 0._r8
+          this%peat_deep_boundary_p_flux_col(c) = 0._r8
+          this%peat_deep_boundary_c13_flux_col(c) = 0._r8
+          this%peat_deep_boundary_c14_flux_col(c) = 0._r8
           this%peat_zwt_running_mean_col(c) = 0._r8
           this%peat_zwt_gs_deepest_col(c) = 0._r8
           this%peat_zwt_annual_low_col(c,1:5) = 0._r8
