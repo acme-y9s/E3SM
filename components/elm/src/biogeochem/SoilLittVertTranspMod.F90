@@ -342,9 +342,10 @@ contains
     logical  :: transport_pool(num_soilc,ndecomp_pools)
     real(r8) :: peat_c_density(num_soilc,nlevdecomp)
     real(r8) :: peat_deep_reservoir_increment
-    real(r8) :: deep_reservoir_c_before(num_soilc)
-    real(r8) :: deep_reservoir_n_before(num_soilc)
-    real(r8) :: deep_reservoir_p_before(num_soilc)
+    real(r8) :: peat_deep_reservoir_old
+    real(r8) :: deep_reservoir_c_residual(num_soilc)
+    real(r8) :: deep_reservoir_n_residual(num_soilc)
+    real(r8) :: deep_reservoir_p_residual(num_soilc)
     !-----------------------------------------------------------------------
 
 
@@ -427,7 +428,7 @@ contains
       endif
    
       !$acc enter data create(spinup_term, i_type) 
-      !$acc enter data create(deep_reservoir_c_before(:), deep_reservoir_n_before(:), deep_reservoir_p_before(:))
+      !$acc enter data create(deep_reservoir_c_residual(:), deep_reservoir_n_residual(:), deep_reservoir_p_residual(:))
       spinup_term = 1._r8
       !$acc update device(spinup_term)
 
@@ -475,6 +476,9 @@ contains
          peat_deep_boundary_p_flux_diag(c) = 0._r8
          peat_deep_boundary_c13_flux_diag(c) = 0._r8
          peat_deep_boundary_c14_flux_diag(c) = 0._r8
+         deep_reservoir_c_residual(fc) = 0._r8
+         deep_reservoir_n_residual(fc) = 0._r8
+         deep_reservoir_p_residual(fc) = 0._r8
          if (peat_dynamic_column(fc)) then
             t = col_pp%topounit(c)
             if (top_pp%acrotelm_depth(t) > 0._r8) then
@@ -1029,7 +1033,7 @@ contains
             ! column concentration and source arrays still contain the
             ! pre-transport values at this point.
             if (use_peatland_deep_effective_reservoir) then
-               !$acc parallel loop independent gang worker vector collapse(2) default(present) private(c,peat_deep_reservoir_increment)
+               !$acc parallel loop independent gang worker vector collapse(2) default(present) private(c,peat_deep_reservoir_increment,peat_deep_reservoir_old)
                do s = 1, ndecomp_pools
                   do fc = 1, num_soilc
                      if (transport_pool(fc,s)) then
@@ -1042,17 +1046,33 @@ contains
                                conc_trcr(fc,j,s)) * dzsoi_decomp(j)
                         end do
                         peat_deep_reservoir_increment = max(0._r8, peat_deep_reservoir_increment)
+                        if (peat_deep_reservoir_increment /= peat_deep_reservoir_increment .or. &
+                             abs(peat_deep_reservoir_increment) > 1.e30_r8) then
+                           peat_deep_reservoir_increment = 0._r8
+                        end if
                         select case (i_type)
                         case (1)
+                           peat_deep_reservoir_old = peat_deep_reservoir_c(c,s)
                            peat_deep_reservoir_c(c,s) = peat_deep_reservoir_c(c,s) + peat_deep_reservoir_increment
+                           !$acc atomic update
+                           deep_reservoir_c_residual(fc) = deep_reservoir_c_residual(fc) + &
+                                peat_deep_reservoir_c(c,s) - peat_deep_reservoir_old - peat_deep_reservoir_increment
                            peat_deep_boundary_c_flux_diag(c) = peat_deep_boundary_c_flux_diag(c) + &
                                 peat_deep_reservoir_increment / dtime_mod
                         case (2)
+                           peat_deep_reservoir_old = peat_deep_reservoir_n(c,s)
                            peat_deep_reservoir_n(c,s) = peat_deep_reservoir_n(c,s) + peat_deep_reservoir_increment
+                           !$acc atomic update
+                           deep_reservoir_n_residual(fc) = deep_reservoir_n_residual(fc) + &
+                                peat_deep_reservoir_n(c,s) - peat_deep_reservoir_old - peat_deep_reservoir_increment
                            peat_deep_boundary_n_flux_diag(c) = peat_deep_boundary_n_flux_diag(c) + &
                                 peat_deep_reservoir_increment / dtime_mod
                         case (3)
+                           peat_deep_reservoir_old = peat_deep_reservoir_p(c,s)
                            peat_deep_reservoir_p(c,s) = peat_deep_reservoir_p(c,s) + peat_deep_reservoir_increment
+                           !$acc atomic update
+                           deep_reservoir_p_residual(fc) = deep_reservoir_p_residual(fc) + &
+                                peat_deep_reservoir_p(c,s) - peat_deep_reservoir_old - peat_deep_reservoir_increment
                            peat_deep_boundary_p_flux_diag(c) = peat_deep_boundary_p_flux_diag(c) + &
                                 peat_deep_reservoir_increment / dtime_mod
                         case (4)
@@ -1158,12 +1178,9 @@ contains
             peat_deep_reservoir_c_diag(c) = sum(peat_deep_reservoir_c(c,1:ndecomp_pools))
             peat_deep_reservoir_n_diag(c) = sum(peat_deep_reservoir_n(c,1:ndecomp_pools))
             peat_deep_reservoir_p_diag(c) = sum(peat_deep_reservoir_p(c,1:ndecomp_pools))
-            peat_deep_reservoir_c_residual_diag(c) = peat_deep_reservoir_c_diag(c) - &
-                 deep_reservoir_c_before(fc) - peat_deep_boundary_c_flux_diag(c) * dtime_mod
-            peat_deep_reservoir_n_residual_diag(c) = peat_deep_reservoir_n_diag(c) - &
-                 deep_reservoir_n_before(fc) - peat_deep_boundary_n_flux_diag(c) * dtime_mod
-            peat_deep_reservoir_p_residual_diag(c) = peat_deep_reservoir_p_diag(c) - &
-                 deep_reservoir_p_before(fc) - peat_deep_boundary_p_flux_diag(c) * dtime_mod
+            peat_deep_reservoir_c_residual_diag(c) = deep_reservoir_c_residual(fc)
+            peat_deep_reservoir_n_residual_diag(c) = deep_reservoir_n_residual(fc)
+            peat_deep_reservoir_p_residual_diag(c) = deep_reservoir_p_residual(fc)
             if (use_c13) then
                peat_deep_reservoir_c13_diag(c) = sum(peat_deep_reservoir_c13(c,1:ndecomp_pools))
             else
@@ -1172,16 +1189,7 @@ contains
             if (use_c14) then
                peat_deep_reservoir_c14_diag(c) = sum(peat_deep_reservoir_c14(c,1:ndecomp_pools))
             else
-         peat_deep_reservoir_c14_diag(c) = 0._r8
-         if (use_peatland_deep_effective_reservoir) then
-            deep_reservoir_c_before(fc) = sum(peat_deep_reservoir_c(c,1:ndecomp_pools))
-            deep_reservoir_n_before(fc) = sum(peat_deep_reservoir_n(c,1:ndecomp_pools))
-            deep_reservoir_p_before(fc) = sum(peat_deep_reservoir_p(c,1:ndecomp_pools))
-         else
-            deep_reservoir_c_before(fc) = 0._r8
-            deep_reservoir_n_before(fc) = 0._r8
-            deep_reservoir_p_before(fc) = 0._r8
-         end if
+               peat_deep_reservoir_c14_diag(c) = 0._r8
             end if
          end do
       end if
@@ -1192,8 +1200,8 @@ contains
       !$acc     peat_compaction_timescale_seconds, peat_zwt_running_alpha, &
       !$acc     peat_zwt_annual_alpha, peat_dynamic_column(:), &
       !$acc     transport_pool(:,:), peat_c_density(:,:), &
-      !$acc     deep_reservoir_c_before(:), deep_reservoir_n_before(:), &
-      !$acc     deep_reservoir_p_before(:))
+      !$acc     deep_reservoir_c_residual(:), deep_reservoir_n_residual(:), &
+      !$acc     deep_reservoir_p_residual(:))
     end associate
 
   end subroutine SoilLittVertTransp
