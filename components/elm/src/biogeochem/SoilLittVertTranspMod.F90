@@ -342,6 +342,9 @@ contains
     logical  :: transport_pool(num_soilc,ndecomp_pools)
     real(r8) :: peat_c_density(num_soilc,nlevdecomp)
     real(r8) :: peat_deep_reservoir_increment
+    real(r8) :: deep_reservoir_c_before(num_soilc)
+    real(r8) :: deep_reservoir_n_before(num_soilc)
+    real(r8) :: deep_reservoir_p_before(num_soilc)
     !-----------------------------------------------------------------------
 
 
@@ -380,6 +383,9 @@ contains
          peat_deep_reservoir_p_diag => cnstate_vars%peat_deep_reservoir_p_col, &
          peat_deep_reservoir_c13_diag => cnstate_vars%peat_deep_reservoir_c13_col, &
          peat_deep_reservoir_c14_diag => cnstate_vars%peat_deep_reservoir_c14_col, &
+         peat_deep_reservoir_c_residual_diag => cnstate_vars%peat_deep_reservoir_c_residual_col, &
+         peat_deep_reservoir_n_residual_diag => cnstate_vars%peat_deep_reservoir_n_residual_col, &
+         peat_deep_reservoir_p_residual_diag => cnstate_vars%peat_deep_reservoir_p_residual_col, &
          peat_zwt_running_mean => cnstate_vars%peat_zwt_running_mean_col, &
          peat_zwt_gs_deepest => cnstate_vars%peat_zwt_gs_deepest_col, &
          peat_zwt_annual_low => cnstate_vars%peat_zwt_annual_low_col, &
@@ -421,6 +427,7 @@ contains
       endif
    
       !$acc enter data create(spinup_term, i_type) 
+      !$acc enter data create(deep_reservoir_c_before(:), deep_reservoir_n_before(:), deep_reservoir_p_before(:))
       spinup_term = 1._r8
       !$acc update device(spinup_term)
 
@@ -1151,6 +1158,12 @@ contains
             peat_deep_reservoir_c_diag(c) = sum(peat_deep_reservoir_c(c,1:ndecomp_pools))
             peat_deep_reservoir_n_diag(c) = sum(peat_deep_reservoir_n(c,1:ndecomp_pools))
             peat_deep_reservoir_p_diag(c) = sum(peat_deep_reservoir_p(c,1:ndecomp_pools))
+            peat_deep_reservoir_c_residual_diag(c) = peat_deep_reservoir_c_diag(c) - &
+                 deep_reservoir_c_before(fc) - peat_deep_boundary_c_flux_diag(c) * dtime_mod
+            peat_deep_reservoir_n_residual_diag(c) = peat_deep_reservoir_n_diag(c) - &
+                 deep_reservoir_n_before(fc) - peat_deep_boundary_n_flux_diag(c) * dtime_mod
+            peat_deep_reservoir_p_residual_diag(c) = peat_deep_reservoir_p_diag(c) - &
+                 deep_reservoir_p_before(fc) - peat_deep_boundary_p_flux_diag(c) * dtime_mod
             if (use_c13) then
                peat_deep_reservoir_c13_diag(c) = sum(peat_deep_reservoir_c13(c,1:ndecomp_pools))
             else
@@ -1159,7 +1172,16 @@ contains
             if (use_c14) then
                peat_deep_reservoir_c14_diag(c) = sum(peat_deep_reservoir_c14(c,1:ndecomp_pools))
             else
-               peat_deep_reservoir_c14_diag(c) = 0._r8
+         peat_deep_reservoir_c14_diag(c) = 0._r8
+         if (use_peatland_deep_effective_reservoir) then
+            deep_reservoir_c_before(fc) = sum(peat_deep_reservoir_c(c,1:ndecomp_pools))
+            deep_reservoir_n_before(fc) = sum(peat_deep_reservoir_n(c,1:ndecomp_pools))
+            deep_reservoir_p_before(fc) = sum(peat_deep_reservoir_p(c,1:ndecomp_pools))
+         else
+            deep_reservoir_c_before(fc) = 0._r8
+            deep_reservoir_n_before(fc) = 0._r8
+            deep_reservoir_p_before(fc) = 0._r8
+         end if
             end if
          end do
       end if
@@ -1169,7 +1191,9 @@ contains
       !$acc     conc_trcr(:,:,:), spinup_term, i_type, dom_diffusion_multiplier, &
       !$acc     peat_compaction_timescale_seconds, peat_zwt_running_alpha, &
       !$acc     peat_zwt_annual_alpha, peat_dynamic_column(:), &
-      !$acc     transport_pool(:,:), peat_c_density(:,:))
+      !$acc     transport_pool(:,:), peat_c_density(:,:), &
+      !$acc     deep_reservoir_c_before(:), deep_reservoir_n_before(:), &
+      !$acc     deep_reservoir_p_before(:))
     end associate
 
   end subroutine SoilLittVertTransp
