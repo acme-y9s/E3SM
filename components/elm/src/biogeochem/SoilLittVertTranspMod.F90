@@ -378,6 +378,8 @@ contains
          peat_deep_reservoir_c_diag => cnstate_vars%peat_deep_reservoir_c_col, &
          peat_deep_reservoir_n_diag => cnstate_vars%peat_deep_reservoir_n_col, &
          peat_deep_reservoir_p_diag => cnstate_vars%peat_deep_reservoir_p_col, &
+         peat_deep_reservoir_c13_diag => cnstate_vars%peat_deep_reservoir_c13_col, &
+         peat_deep_reservoir_c14_diag => cnstate_vars%peat_deep_reservoir_c14_col, &
          peat_zwt_running_mean => cnstate_vars%peat_zwt_running_mean_col, &
          peat_zwt_gs_deepest => cnstate_vars%peat_zwt_gs_deepest_col, &
          peat_zwt_annual_low => cnstate_vars%peat_zwt_annual_low_col, &
@@ -1149,6 +1151,16 @@ contains
             peat_deep_reservoir_c_diag(c) = sum(peat_deep_reservoir_c(c,1:ndecomp_pools))
             peat_deep_reservoir_n_diag(c) = sum(peat_deep_reservoir_n(c,1:ndecomp_pools))
             peat_deep_reservoir_p_diag(c) = sum(peat_deep_reservoir_p(c,1:ndecomp_pools))
+            if (use_c13) then
+               peat_deep_reservoir_c13_diag(c) = sum(peat_deep_reservoir_c13(c,1:ndecomp_pools))
+            else
+               peat_deep_reservoir_c13_diag(c) = 0._r8
+            end if
+            if (use_c14) then
+               peat_deep_reservoir_c14_diag(c) = sum(peat_deep_reservoir_c14(c,1:ndecomp_pools))
+            else
+               peat_deep_reservoir_c14_diag(c) = 0._r8
+            end if
          end do
       end if
    
