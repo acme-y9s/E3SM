@@ -11,6 +11,7 @@ module SoilLittVertTranspMod
   use elm_varctl             , only : use_peatland_compaction_profile
   use elm_varctl             , only : use_peatland_fixed_grid_capacity
   use elm_varctl             , only : use_peatland_deep_effective_reservoir
+  use elm_varctl             , only : use_peatland_deep_reservoir_turnover
   use elm_varctl             , only : use_jules_peat_hydraulics
   use elm_varctl             , only : use_microbe_aqueous_transport
   use elm_varcon             , only : secspday
@@ -30,6 +31,7 @@ module SoilLittVertTranspMod
                                       peat_hydraulic_carbon_fraction, &
                                       peat_hydraulic_bulk_density_min, &
                                       peat_hydraulic_bulk_density_max
+  use SharedParamsMod        , only : peat_deep_reservoir_turnover_rate
   use CanopyStateType        , only : canopystate_type
   use CNStateType            , only : cnstate_type
   use SoilHydrologyType      , only : soilhydrology_type
@@ -343,6 +345,8 @@ contains
     real(r8) :: peat_c_density(num_soilc,nlevdecomp)
     real(r8) :: peat_deep_reservoir_increment
     real(r8) :: peat_deep_reservoir_old
+    real(r8) :: peat_deep_reservoir_turnover_fraction
+    real(r8) :: peat_deep_reservoir_release
     real(r8) :: deep_reservoir_c_residual(num_soilc)
     real(r8) :: deep_reservoir_n_residual(num_soilc)
     real(r8) :: deep_reservoir_p_residual(num_soilc)
@@ -434,11 +438,17 @@ contains
 
       peat_compaction_timescale_seconds = peat_compaction_timescale_years * &
            secspday * 365._r8
+      peat_deep_reservoir_turnover_fraction = 0._r8
+      if (use_peatland_deep_reservoir_turnover .and. &
+           peat_deep_reservoir_turnover_rate > 0._r8) then
+         peat_deep_reservoir_turnover_fraction = 1._r8 - exp(-peat_deep_reservoir_turnover_rate * &
+              dtime_mod / (secspday * 365._r8))
+      end if
       peat_zwt_running_alpha = 1._r8 - exp(-dtime_mod / &
            (peat_compaction_zwt_running_mean_days * secspday))
       peat_zwt_annual_alpha = 1._r8 - exp(-1._r8 / &
            peat_compaction_zwt_smoothing_years)
-      !$acc enter data copyin(peat_compaction_timescale_seconds, &
+      !$acc enter data copyin(peat_compaction_timescale_seconds, peat_deep_reservoir_turnover_fraction, &
       !$acc     peat_zwt_running_alpha, peat_zwt_annual_alpha)
 
       ! Build the physical-equivalent solid-C density used by the peat
@@ -854,6 +864,54 @@ contains
 
          !$acc update device(i_type)
 
+         ! Optional first-order turnover returns a fraction of each
+         ! pool-resolved deep reservoir to the deepest active ELM layer.
+         ! The subtraction and addition use the same release amount, so the
+         ! reservoir-plus-column total is conserved.
+         if (peat_deep_reservoir_turnover_fraction > 0._r8) then
+            !$acc parallel loop independent gang worker vector collapse(2) default(present) &
+            !$acc& private(c,peat_deep_reservoir_release)
+            do s = 1, ndecomp_pools
+               do fc = 1, num_soilc
+                  if (transport_pool(fc,s)) then
+                     c = filter_soilc(fc)
+                     select case (i_type)
+                     case (1)
+                        peat_deep_reservoir_release = peat_deep_reservoir_c(c,s) * &
+                             peat_deep_reservoir_turnover_fraction
+                        peat_deep_reservoir_c(c,s) = peat_deep_reservoir_c(c,s) - peat_deep_reservoir_release
+                     case (2)
+                        peat_deep_reservoir_release = peat_deep_reservoir_n(c,s) * &
+                             peat_deep_reservoir_turnover_fraction
+                        peat_deep_reservoir_n(c,s) = peat_deep_reservoir_n(c,s) - peat_deep_reservoir_release
+                     case (3)
+                        peat_deep_reservoir_release = peat_deep_reservoir_p(c,s) * &
+                             peat_deep_reservoir_turnover_fraction
+                        peat_deep_reservoir_p(c,s) = peat_deep_reservoir_p(c,s) - peat_deep_reservoir_release
+                     case (4)
+                        if (use_c13) then
+                           peat_deep_reservoir_release = peat_deep_reservoir_c13(c,s) * &
+                                peat_deep_reservoir_turnover_fraction
+                           peat_deep_reservoir_c13(c,s) = peat_deep_reservoir_c13(c,s) - peat_deep_reservoir_release
+                        else if (use_c14 .and. .not. use_c13) then
+                           peat_deep_reservoir_release = peat_deep_reservoir_c14(c,s) * &
+                                peat_deep_reservoir_turnover_fraction
+                           peat_deep_reservoir_c14(c,s) = peat_deep_reservoir_c14(c,s) - peat_deep_reservoir_release
+                        else
+                           peat_deep_reservoir_release = 0._r8
+                        end if
+                     case (5)
+                        peat_deep_reservoir_release = peat_deep_reservoir_c14(c,s) * &
+                             peat_deep_reservoir_turnover_fraction
+                        peat_deep_reservoir_c14(c,s) = peat_deep_reservoir_c14(c,s) - peat_deep_reservoir_release
+                     end select
+                     transport_ptr_list(i_type)%conc_ptr(c,nlevdecomp,s) = &
+                          transport_ptr_list(i_type)%conc_ptr(c,nlevdecomp,s) + peat_deep_reservoir_release
+                  end if
+               end do
+            end do
+         end if
+
          if (use_vertsoilc) then
             ! Set Pe (Peclet #) and D/dz throughout column
 
@@ -1197,7 +1255,8 @@ contains
       !$acc exit data delete(a_tri(:,:,:),b_tri(:,:,:),&
       !$acc     c_tri(:,:,:),r_tri(:,:,:), gam(:), &
       !$acc     conc_trcr(:,:,:), spinup_term, i_type, dom_diffusion_multiplier, &
-      !$acc     peat_compaction_timescale_seconds, peat_zwt_running_alpha, &
+      !$acc     peat_compaction_timescale_seconds, peat_deep_reservoir_turnover_fraction, &
+      !$acc     peat_zwt_running_alpha, &
       !$acc     peat_zwt_annual_alpha, peat_dynamic_column(:), &
       !$acc     transport_pool(:,:), peat_c_density(:,:), &
       !$acc     deep_reservoir_c_residual(:), deep_reservoir_n_residual(:), &
