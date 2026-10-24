@@ -375,6 +375,9 @@ contains
          peat_deep_boundary_p_flux_diag => cnstate_vars%peat_deep_boundary_p_flux_col, &
          peat_deep_boundary_c13_flux_diag => cnstate_vars%peat_deep_boundary_c13_flux_col, &
          peat_deep_boundary_c14_flux_diag => cnstate_vars%peat_deep_boundary_c14_flux_col, &
+         peat_deep_reservoir_c_diag => cnstate_vars%peat_deep_reservoir_c_col, &
+         peat_deep_reservoir_n_diag => cnstate_vars%peat_deep_reservoir_n_col, &
+         peat_deep_reservoir_p_diag => cnstate_vars%peat_deep_reservoir_p_col, &
          peat_zwt_running_mean => cnstate_vars%peat_zwt_running_mean_col, &
          peat_zwt_gs_deepest => cnstate_vars%peat_zwt_gs_deepest_col, &
          peat_zwt_annual_low => cnstate_vars%peat_zwt_annual_low_col, &
@@ -1136,6 +1139,18 @@ contains
          endif
 
       end do  ! i_type
+
+      ! Publish pool-summed cumulative reservoir amounts as column-level
+      ! diagnostics after all transported tracers have been updated.
+      if (use_peatland_deep_effective_reservoir) then
+         !$acc parallel loop independent gang vector default(present) private(c)
+         do fc = 1, num_soilc
+            c = filter_soilc(fc)
+            peat_deep_reservoir_c_diag(c) = sum(peat_deep_reservoir_c(c,1:ndecomp_pools))
+            peat_deep_reservoir_n_diag(c) = sum(peat_deep_reservoir_n(c,1:ndecomp_pools))
+            peat_deep_reservoir_p_diag(c) = sum(peat_deep_reservoir_p(c,1:ndecomp_pools))
+         end do
+      end if
    
       !$acc exit data delete(a_tri(:,:,:),b_tri(:,:,:),&
       !$acc     c_tri(:,:,:),r_tri(:,:,:), gam(:), &
