@@ -143,3 +143,17 @@ reservoir variables, and their values increased after continuation. The h1
 history files contained all five deepest-boundary flux diagnostics and the
 three cumulative reservoir diagnostics. C-13 and C-14 fluxes were zero in the
 test because the test case did not produce nonzero isotope transport.
+
+The conservation-residual diagnostics were also enabled in the h1 output:
+
+```text
+PEAT_DEEP_RESERVOIR_C_RESIDUAL
+PEAT_DEEP_RESERVOIR_N_RESIDUAL
+PEAT_DEEP_RESERVOIR_P_RESIDUAL
+```
+
+They remained finite and effectively zero at all checkpoints (years 1, 10,
+19, 28, and 37). The largest observed magnitudes were approximately
+`2.1e-26 gC/m2` for C, `1.8e-28 gN/m2` for N, and `3.4e-29 gP/m2` for P.
+This validates the deepest-boundary reservoir balance through both the initial
+18-year run and the 18-year restart continuation.
