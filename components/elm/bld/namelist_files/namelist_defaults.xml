@@ -128,6 +128,7 @@ attributes from the config_cache.xml file (with keys converted to upper-case).
 <use_peatland_compaction_profile>.false.</use_peatland_compaction_profile>
 <use_peatland_fixed_grid_capacity>.false.</use_peatland_fixed_grid_capacity>
 <use_peatland_deep_effective_reservoir>.false.</use_peatland_deep_effective_reservoir>
+<use_peatland_deep_reservoir_turnover>.false.</use_peatland_deep_reservoir_turnover>
 
 <!-- ================================================================== -->
 <!-- The default filenames are given relative to the root directory

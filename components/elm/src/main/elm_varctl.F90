@@ -504,6 +504,7 @@ module elm_varctl
   logical, public            :: use_peatland_compaction_profile = .false.
   logical, public            :: use_peatland_fixed_grid_capacity = .false.
   logical, public            :: use_peatland_deep_effective_reservoir = .false.
+  logical, public            :: use_peatland_deep_reservoir_turnover = .false.
   logical, public            :: use_jules_peat_hydraulics       = .false.
 
   ! Deep-soil warming treatment. The prognostic thermal solution is retained;
@@ -529,6 +530,7 @@ module elm_varctl
   !$acc declare copyin(use_peatland_compaction_profile)
   !$acc declare copyin(use_peatland_fixed_grid_capacity)
   !$acc declare copyin(use_peatland_deep_effective_reservoir)
+  !$acc declare copyin(use_peatland_deep_reservoir_turnover)
   !$acc declare copyin(use_jules_peat_hydraulics)
  
   !-----------------------------------------------------------------------

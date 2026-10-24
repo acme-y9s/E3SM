@@ -77,6 +77,7 @@ module controlMod
                         use_peatland_vertical_transport, &
                         use_peatland_compaction_profile, &
                         use_peatland_fixed_grid_capacity, use_peatland_deep_effective_reservoir, &
+                        use_peatland_deep_reservoir_turnover, &
                         use_jules_peat_hydraulics, &
                         use_deep_soil_heating, soil_heating_reference_file, &
                         soil_heating_stream_year_first, soil_heating_stream_year_last, &
@@ -416,7 +417,7 @@ contains
          use_moss_capillary_nutrients, use_prognostic_moss_water, &
          use_peatland_vertical_transport, &
          use_peatland_compaction_profile, use_peatland_fixed_grid_capacity, &
-         use_peatland_deep_effective_reservoir, &
+         use_peatland_deep_effective_reservoir, use_peatland_deep_reservoir_turnover, &
          use_jules_peat_hydraulics, &
          use_deep_soil_heating, &
          soil_heating_reference_file, soil_heating_stream_year_first, &
@@ -1232,6 +1233,7 @@ contains
     call mpi_bcast (use_peatland_compaction_profile, 1, MPI_LOGICAL, 0, mpicom, ier)
     call mpi_bcast (use_peatland_fixed_grid_capacity, 1, MPI_LOGICAL, 0, mpicom, ier)
     call mpi_bcast (use_peatland_deep_effective_reservoir, 1, MPI_LOGICAL, 0, mpicom, ier)
+    call mpi_bcast (use_peatland_deep_reservoir_turnover, 1, MPI_LOGICAL, 0, mpicom, ier)
     call mpi_bcast (use_jules_peat_hydraulics, 1, MPI_LOGICAL, 0, mpicom, ier)
     call mpi_bcast (use_deep_soil_heating, 1, MPI_LOGICAL, 0, mpicom, ier)
     call mpi_bcast (soil_heating_reference_file, len(soil_heating_reference_file), MPI_CHARACTER, 0, mpicom, ier)
@@ -1251,6 +1253,7 @@ contains
     !$acc update device(use_peatland_compaction_profile)
     !$acc update device(use_peatland_fixed_grid_capacity)
     !$acc update device(use_peatland_deep_effective_reservoir)
+    !$acc update device(use_peatland_deep_reservoir_turnover)
     !$acc update device(use_jules_peat_hydraulics)
 
     if ((use_cn .or. use_fates) .and. use_vertsoilc) then
@@ -1290,6 +1293,10 @@ contains
     if (use_peatland_deep_effective_reservoir .and. .not. use_peatland_fixed_grid_capacity) then
        call endrun(msg=' ERROR: use_peatland_deep_effective_reservoir=.true. requires '//&
             'use_peatland_fixed_grid_capacity=.true.'//errMsg(__FILE__, __LINE__))
+    end if
+    if (use_peatland_deep_reservoir_turnover .and. .not. use_peatland_deep_effective_reservoir) then
+       call endrun(msg=' ERROR: use_peatland_deep_reservoir_turnover=.true. requires '//&
+            'use_peatland_deep_effective_reservoir=.true.'//errMsg(__FILE__, __LINE__))
     end if
     if (use_jules_peat_hydraulics .and. .not. use_peatland_compaction_profile) then
        call endrun(msg=' ERROR: use_jules_peat_hydraulics=.true. requires '//&
@@ -1465,6 +1472,7 @@ contains
     write(iulog,*) '    use_peatland_vertical_transport = ', use_peatland_vertical_transport
     write(iulog,*) '    use_peatland_compaction_profile = ', use_peatland_compaction_profile
     write(iulog,*) '    use_peatland_deep_effective_reservoir = ', use_peatland_deep_effective_reservoir
+    write(iulog,*) '    use_peatland_deep_reservoir_turnover = ', use_peatland_deep_reservoir_turnover
     write(iulog,*) '    use_jules_peat_hydraulics = ', use_jules_peat_hydraulics
     write(iulog,*) '    use_deep_soil_heating = ', use_deep_soil_heating
     if (use_deep_soil_heating) then

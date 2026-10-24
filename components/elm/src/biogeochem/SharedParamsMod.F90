@@ -53,6 +53,7 @@ module SharedParamsMod
   real(r8), public :: peat_compaction_growing_season_start_doy = 121._r8
   real(r8), public :: peat_compaction_growing_season_end_doy = 305._r8
   real(r8), public :: peat_compaction_timescale_years = 1._r8
+  real(r8), public :: peat_deep_reservoir_turnover_rate = 0._r8 ! yr-1; turnover flux is not active yet
   real(r8), public :: soil_ice_impedance_exponent = 6._r8
   real(r8), public :: peat_hydraulic_b_max = 12._r8
   real(r8), public :: peat_hydraulic_hksat_min = 1.e-4_r8
@@ -85,6 +86,7 @@ module SharedParamsMod
   !$acc declare copyin(peat_compaction_growing_season_start_doy)
   !$acc declare copyin(peat_compaction_growing_season_end_doy)
   !$acc declare copyin(peat_compaction_timescale_years)
+  !$acc declare copyin(peat_deep_reservoir_turnover_rate)
   !$acc declare copyin(soil_ice_impedance_exponent)
   !$acc declare copyin(peat_hydraulic_b_max)
   !$acc declare copyin(peat_hydraulic_hksat_min)
@@ -283,6 +285,10 @@ contains
         call ncd_io(trim(tString),tempr, 'read', ncid, readvar=readv)
         if (readv) peat_compaction_timescale_years=tempr
 
+        tString='peat_deep_reservoir_turnover_rate'
+        call ncd_io(trim(tString),tempr, 'read', ncid, readvar=readv)
+        if (readv) peat_deep_reservoir_turnover_rate=tempr
+
         tString='soil_ice_impedance_exponent'
         call ncd_io(trim(tString),tempr, 'read', ncid, readvar=readv)
         if (readv) soil_ice_impedance_exponent=tempr
@@ -374,6 +380,10 @@ contains
                 'must be at least surface density, and hydrologic depth/time settings must be valid'//&
                 errMsg(__FILE__, __LINE__))
         end if
+        if (peat_deep_reservoir_turnover_rate < 0._r8) then
+           call endrun(msg=' ERROR: peat_deep_reservoir_turnover_rate must be nonnegative'//&
+                errMsg(__FILE__, __LINE__))
+        end if
 
         !$acc update device(moss_capillary_max_demand_fraction)
         !$acc update device(moss_capillary_connectivity_timescale_days)
@@ -398,6 +408,7 @@ contains
         !$acc update device(peat_compaction_growing_season_start_doy)
         !$acc update device(peat_compaction_growing_season_end_doy)
         !$acc update device(peat_compaction_timescale_years)
+        !$acc update device(peat_deep_reservoir_turnover_rate)
         !$acc update device(soil_ice_impedance_exponent)
         !$acc update device(peat_hydraulic_b_max)
         !$acc update device(peat_hydraulic_hksat_min)

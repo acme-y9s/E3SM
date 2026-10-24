@@ -1024,6 +1024,13 @@ in a restartable effective deep reservoir. This option requires
 use_peatland_fixed_grid_capacity.
 </entry>
 
+<entry id="use_peatland_deep_reservoir_turnover" type="logical" category="physics"
+       group="elm_inparm" valid_values="" value=".false.">
+If TRUE, enable the optional slow turnover pathway for the effective deep peat
+reservoir. This control is scaffolding only until the turnover flux is enabled.
+It requires use_peatland_deep_effective_reservoir.
+</entry>
+
 <entry id="use_jules_peat_hydraulics" type="logical" category="physics"
        group="elm_inparm" valid_values="" value=".false.">
 If TRUE, derive peatland porosity, Clapp-Hornberger b, saturated suction,
