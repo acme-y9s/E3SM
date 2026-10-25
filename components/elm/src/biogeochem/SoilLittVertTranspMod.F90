@@ -389,6 +389,9 @@ contains
          peat_deep_reservoir_turnover_c_diag => cnstate_vars%peat_deep_reservoir_turnover_c_col, &
          peat_deep_reservoir_turnover_n_diag => cnstate_vars%peat_deep_reservoir_turnover_n_col, &
          peat_deep_reservoir_turnover_p_diag => cnstate_vars%peat_deep_reservoir_turnover_p_col, &
+         peat_deep_reservoir_turnover_cumulative_c_diag => cnstate_vars%peat_deep_reservoir_turnover_cumulative_c_col, &
+         peat_deep_reservoir_turnover_cumulative_n_diag => cnstate_vars%peat_deep_reservoir_turnover_cumulative_n_col, &
+         peat_deep_reservoir_turnover_cumulative_p_diag => cnstate_vars%peat_deep_reservoir_turnover_cumulative_p_col, &
          peat_deep_reservoir_c13_diag => cnstate_vars%peat_deep_reservoir_c13_col, &
          peat_deep_reservoir_c14_diag => cnstate_vars%peat_deep_reservoir_c14_col, &
          peat_deep_reservoir_c_residual_diag => cnstate_vars%peat_deep_reservoir_c_residual_col, &
@@ -890,6 +893,9 @@ contains
                         peat_deep_reservoir_turnover_c_diag(c) = &
                              peat_deep_reservoir_turnover_c_diag(c) + &
                              peat_deep_reservoir_release / dtime_mod
+                        !$acc atomic update
+                        peat_deep_reservoir_turnover_cumulative_c_diag(c) = &
+                             peat_deep_reservoir_turnover_cumulative_c_diag(c) + peat_deep_reservoir_release
                      case (2)
                         peat_deep_reservoir_release = peat_deep_reservoir_n(c,s) * &
                              peat_deep_reservoir_turnover_fraction
@@ -898,6 +904,9 @@ contains
                         peat_deep_reservoir_turnover_n_diag(c) = &
                              peat_deep_reservoir_turnover_n_diag(c) + &
                              peat_deep_reservoir_release / dtime_mod
+                        !$acc atomic update
+                        peat_deep_reservoir_turnover_cumulative_n_diag(c) = &
+                             peat_deep_reservoir_turnover_cumulative_n_diag(c) + peat_deep_reservoir_release
                      case (3)
                         peat_deep_reservoir_release = peat_deep_reservoir_p(c,s) * &
                              peat_deep_reservoir_turnover_fraction
@@ -906,6 +915,9 @@ contains
                         peat_deep_reservoir_turnover_p_diag(c) = &
                              peat_deep_reservoir_turnover_p_diag(c) + &
                              peat_deep_reservoir_release / dtime_mod
+                        !$acc atomic update
+                        peat_deep_reservoir_turnover_cumulative_p_diag(c) = &
+                             peat_deep_reservoir_turnover_cumulative_p_diag(c) + peat_deep_reservoir_release
                      case (4)
                         if (use_c13) then
                            peat_deep_reservoir_release = peat_deep_reservoir_c13(c,s) * &

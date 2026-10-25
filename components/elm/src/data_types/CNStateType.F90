@@ -109,6 +109,9 @@ module CNStateType
      real(r8) , pointer :: peat_deep_reservoir_turnover_c_col (:) ! col deep C turnover flux (gC/m2/s)
      real(r8) , pointer :: peat_deep_reservoir_turnover_n_col (:) ! col deep N turnover flux (gN/m2/s)
      real(r8) , pointer :: peat_deep_reservoir_turnover_p_col (:) ! col deep P turnover flux (gP/m2/s)
+     real(r8) , pointer :: peat_deep_reservoir_turnover_cumulative_c_col (:) ! col C turnover since initialization (gC/m2)
+     real(r8) , pointer :: peat_deep_reservoir_turnover_cumulative_n_col (:) ! col N turnover since initialization (gN/m2)
+     real(r8) , pointer :: peat_deep_reservoir_turnover_cumulative_p_col (:) ! col P turnover since initialization (gP/m2)
      real(r8) , pointer :: peat_zwt_running_mean_col   (:)     ! col sustained growing-season ZWT depth (m)
      real(r8) , pointer :: peat_zwt_gs_deepest_col     (:)     ! col annual deepest running-mean growing-season ZWT (m)
      real(r8) , pointer :: peat_zwt_annual_low_col      (:,:)   ! col five-year history of annual sustained low-water depths (m)
@@ -326,6 +329,9 @@ contains
     allocate(this%peat_deep_reservoir_turnover_c_col(begc:endc)); this%peat_deep_reservoir_turnover_c_col(:) = spval
     allocate(this%peat_deep_reservoir_turnover_n_col(begc:endc)); this%peat_deep_reservoir_turnover_n_col(:) = spval
     allocate(this%peat_deep_reservoir_turnover_p_col(begc:endc)); this%peat_deep_reservoir_turnover_p_col(:) = spval
+    allocate(this%peat_deep_reservoir_turnover_cumulative_c_col(begc:endc)); this%peat_deep_reservoir_turnover_cumulative_c_col(:) = spval
+    allocate(this%peat_deep_reservoir_turnover_cumulative_n_col(begc:endc)); this%peat_deep_reservoir_turnover_cumulative_n_col(:) = spval
+    allocate(this%peat_deep_reservoir_turnover_cumulative_p_col(begc:endc)); this%peat_deep_reservoir_turnover_cumulative_p_col(:) = spval
     allocate(this%peat_deep_reservoir_c13_col(begc:endc)); this%peat_deep_reservoir_c13_col(:) = spval
     allocate(this%peat_deep_reservoir_c14_col(begc:endc)); this%peat_deep_reservoir_c14_col(:) = spval
     allocate(this%peat_deep_reservoir_c_residual_col(begc:endc)); this%peat_deep_reservoir_c_residual_col(:) = spval
@@ -628,6 +634,21 @@ contains
     call hist_addfld1d (fname='PEAT_DEEP_RESERVOIR_TURNOVER_P', units='gP/m^2/s', &
          avgflag='A', long_name='P flux released from deep peat reservoir', &
          ptr_col=this%peat_deep_reservoir_turnover_p_col, default='inactive')
+
+    this%peat_deep_reservoir_turnover_cumulative_c_col(begc:endc) = spval
+    call hist_addfld1d (fname='PEAT_DEEP_RESERVOIR_TURNOVER_CUMULATIVE_C', units='gC/m^2', &
+         avgflag='A', long_name='cumulative C released from deep peat reservoir', &
+         ptr_col=this%peat_deep_reservoir_turnover_cumulative_c_col, default='inactive')
+
+    this%peat_deep_reservoir_turnover_cumulative_n_col(begc:endc) = spval
+    call hist_addfld1d (fname='PEAT_DEEP_RESERVOIR_TURNOVER_CUMULATIVE_N', units='gN/m^2', &
+         avgflag='A', long_name='cumulative N released from deep peat reservoir', &
+         ptr_col=this%peat_deep_reservoir_turnover_cumulative_n_col, default='inactive')
+
+    this%peat_deep_reservoir_turnover_cumulative_p_col(begc:endc) = spval
+    call hist_addfld1d (fname='PEAT_DEEP_RESERVOIR_TURNOVER_CUMULATIVE_P', units='gP/m^2', &
+         avgflag='A', long_name='cumulative P released from deep peat reservoir', &
+         ptr_col=this%peat_deep_reservoir_turnover_cumulative_p_col, default='inactive')
 
     this%peat_zwt_running_mean_col(begc:endc) = spval
     call hist_addfld1d (fname='PEAT_ZWT_RUNMEAN', units='m', &
@@ -1281,6 +1302,9 @@ contains
           this%peat_deep_reservoir_turnover_c_col(c) = 0._r8
           this%peat_deep_reservoir_turnover_n_col(c) = 0._r8
           this%peat_deep_reservoir_turnover_p_col(c) = 0._r8
+          this%peat_deep_reservoir_turnover_cumulative_c_col(c) = 0._r8
+          this%peat_deep_reservoir_turnover_cumulative_n_col(c) = 0._r8
+          this%peat_deep_reservoir_turnover_cumulative_p_col(c) = 0._r8
           this%peat_deep_reservoir_c13_col(c) = 0._r8
           this%peat_deep_reservoir_c14_col(c) = 0._r8
           this%peat_deep_reservoir_c_residual_col(c) = 0._r8
