@@ -86,7 +86,7 @@ pool-resolved and restart-compatible.
    composition and C/N/P/isotope pathways. **Completed.**
 5. Add history diagnostics for reservoir mass and boundary inflow. **Completed.**
 6. Test disabled and enabled modes against the existing fixed-grid baseline.
-   **In progress.**
+   **Completed for the deep-reservoir pathway.**
 
 The deep reservoir remains opt-in through the runtime flag.
 
@@ -157,3 +157,65 @@ They remained finite and effectively zero at all checkpoints (years 1, 10,
 `2.1e-26 gC/m2` for C, `1.8e-28 gN/m2` for N, and `3.4e-29 gP/m2` for P.
 This validates the deepest-boundary reservoir balance through both the initial
 18-year run and the 18-year restart continuation.
+
+## Deep-reservoir turnover
+
+The optional first-order turnover pathway releases a fraction of each
+pool-resolved deep-reservoir component back into the deepest active ELM soil
+layer. It is controlled by the namelist switch:
+
+```fortran
+use_peatland_deep_reservoir_turnover = .true.
+```
+
+The turnover coefficient is a scientific parameter stored in the ELM parameter
+NetCDF file and modified through the OLMT `[parameters]` section. For the
+Pathfinder test, the configuration used:
+
+```ini
+peat_deep_reservoir_turnover_rate = 0.001
+```
+
+The release fraction is calculated with a first-order update,
+`1 - exp(-rate * dt_years)`, and is applied separately to C, N, and P pools.
+The reservoir subtraction and deepest-layer addition use the same amount, so
+the reservoir-plus-column total is conserved. The default rate is zero, and
+the turnover switch is opt-in.
+
+Column-level time-mean turnover flux diagnostics are available when requested
+in the history namelist:
+
+```text
+PEAT_DEEP_RESERVOIR_TURNOVER_C
+PEAT_DEEP_RESERVOIR_TURNOVER_N
+PEAT_DEEP_RESERVOIR_TURNOVER_P
+```
+
+They have units of `gC/m2/s`, `gN/m2/s`, and `gP/m2/s`, respectively. Positive
+values indicate release from the deep reservoir into the deepest active layer.
+
+### Turnover validation on Pathfinder
+
+Case:
+
+```text
+20261024_US-SPR_ICB1850CNRDCTCBC_ad_spinup_turnover
+```
+
+The case completed an initial 18-year run followed by an 18-year restart
+continuation, with both reservoir and turnover switches enabled. The restart
+was read at year 19 and the continuation completed through year 37.
+
+The turnover diagnostics increased between years 19 and 37, confirming active
+release. At year 37, representative active-column values were approximately:
+
+```text
+C: 1.6e-22 to 2.1e-19 gC/m2/s
+N: 7.6e-24 to 5.7e-21 gN/m2/s
+P: 1.2e-23 to 1.9e-22 gP/m2/s
+```
+
+The reservoir conservation residuals at year 37 remained near machine
+precision, approximately `1e-26` for C, `1e-28` for N, and `1e-30` for P.
+This validates turnover activation, restart compatibility, and C/N/P
+conservation across the 36-year test sequence.
