@@ -1757,6 +1757,32 @@ contains
        end if
     end if
 
+    ! Restart cumulative deep-reservoir turnover diagnostics.  These are
+    ! column-level accounting states, not instantaneous history fluxes.
+    call restartvar(ncid=ncid, flag=flag, varname='peat_deep_reservoir_turnover_cumulative_c', &
+         xtype=ncd_double, dim1name='column', &
+         long_name='cumulative C released from deep peat reservoir', units='gC/m2', &
+         interpinic_flag='interp', readvar=readvar, data=this%peat_deep_reservoir_turnover_cumulative_c_col)
+    if (flag == 'read' .and. .not. readvar) then
+       this%peat_deep_reservoir_turnover_cumulative_c_col(bounds%begc:bounds%endc) = 0._r8
+    end if
+
+    call restartvar(ncid=ncid, flag=flag, varname='peat_deep_reservoir_turnover_cumulative_n', &
+         xtype=ncd_double, dim1name='column', &
+         long_name='cumulative N released from deep peat reservoir', units='gN/m2', &
+         interpinic_flag='interp', readvar=readvar, data=this%peat_deep_reservoir_turnover_cumulative_n_col)
+    if (flag == 'read' .and. .not. readvar) then
+       this%peat_deep_reservoir_turnover_cumulative_n_col(bounds%begc:bounds%endc) = 0._r8
+    end if
+
+    call restartvar(ncid=ncid, flag=flag, varname='peat_deep_reservoir_turnover_cumulative_p', &
+         xtype=ncd_double, dim1name='column', &
+         long_name='cumulative P released from deep peat reservoir', units='gP/m2', &
+         interpinic_flag='interp', readvar=readvar, data=this%peat_deep_reservoir_turnover_cumulative_p_col)
+    if (flag == 'read' .and. .not. readvar) then
+       this%peat_deep_reservoir_turnover_cumulative_p_col(bounds%begc:bounds%endc) = 0._r8
+    end if
+
     call restartvar(ncid=ncid, flag=flag, varname='nfire', xtype=ncd_double,  &
          dim1name='column', &
          long_name='', units='', &
