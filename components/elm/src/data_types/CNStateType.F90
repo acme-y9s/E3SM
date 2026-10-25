@@ -106,6 +106,9 @@ module CNStateType
      real(r8) , pointer :: peat_deep_reservoir_c_residual_col (:) ! col deep C balance residual (gC/m2)
      real(r8) , pointer :: peat_deep_reservoir_n_residual_col (:) ! col deep N balance residual (gN/m2)
      real(r8) , pointer :: peat_deep_reservoir_p_residual_col (:) ! col deep P balance residual (gP/m2)
+     real(r8) , pointer :: peat_deep_reservoir_c_budget_residual_col (:) ! col C budget residual (gC/m2)
+     real(r8) , pointer :: peat_deep_reservoir_n_budget_residual_col (:) ! col N budget residual (gN/m2)
+     real(r8) , pointer :: peat_deep_reservoir_p_budget_residual_col (:) ! col P budget residual (gP/m2)
      real(r8) , pointer :: peat_deep_reservoir_turnover_c_col (:) ! col deep C turnover flux (gC/m2/s)
      real(r8) , pointer :: peat_deep_reservoir_turnover_n_col (:) ! col deep N turnover flux (gN/m2/s)
      real(r8) , pointer :: peat_deep_reservoir_turnover_p_col (:) ! col deep P turnover flux (gP/m2/s)
@@ -337,6 +340,9 @@ contains
     allocate(this%peat_deep_reservoir_c_residual_col(begc:endc)); this%peat_deep_reservoir_c_residual_col(:) = spval
     allocate(this%peat_deep_reservoir_n_residual_col(begc:endc)); this%peat_deep_reservoir_n_residual_col(:) = spval
     allocate(this%peat_deep_reservoir_p_residual_col(begc:endc)); this%peat_deep_reservoir_p_residual_col(:) = spval
+    allocate(this%peat_deep_reservoir_c_budget_residual_col(begc:endc)); this%peat_deep_reservoir_c_budget_residual_col(:) = spval
+    allocate(this%peat_deep_reservoir_n_budget_residual_col(begc:endc)); this%peat_deep_reservoir_n_budget_residual_col(:) = spval
+    allocate(this%peat_deep_reservoir_p_budget_residual_col(begc:endc)); this%peat_deep_reservoir_p_budget_residual_col(:) = spval
     allocate(this%peat_zwt_running_mean_col(begc:endc))            ; this%peat_zwt_running_mean_col(:) = spval
     allocate(this%peat_zwt_gs_deepest_col(begc:endc))              ; this%peat_zwt_gs_deepest_col(:) = spval
     allocate(this%peat_zwt_annual_low_col(begc:endc,1:5))           ; this%peat_zwt_annual_low_col(:,:) = spval
@@ -619,6 +625,21 @@ contains
     call hist_addfld1d (fname='PEAT_DEEP_RESERVOIR_P_RESIDUAL', units='gP/m^2', &
          avgflag='A', long_name='deep peat phosphorus reservoir conservation residual', &
          ptr_col=this%peat_deep_reservoir_p_residual_col, default='inactive')
+
+    this%peat_deep_reservoir_c_budget_residual_col(begc:endc) = spval
+    call hist_addfld1d (fname='PEAT_DEEP_RESERVOIR_C_BUDGET_RESIDUAL', units='gC/m^2', &
+         avgflag='A', long_name='deep peat carbon budget closure residual', &
+         ptr_col=this%peat_deep_reservoir_c_budget_residual_col, default='inactive')
+
+    this%peat_deep_reservoir_n_budget_residual_col(begc:endc) = spval
+    call hist_addfld1d (fname='PEAT_DEEP_RESERVOIR_N_BUDGET_RESIDUAL', units='gN/m^2', &
+         avgflag='A', long_name='deep peat nitrogen budget closure residual', &
+         ptr_col=this%peat_deep_reservoir_n_budget_residual_col, default='inactive')
+
+    this%peat_deep_reservoir_p_budget_residual_col(begc:endc) = spval
+    call hist_addfld1d (fname='PEAT_DEEP_RESERVOIR_P_BUDGET_RESIDUAL', units='gP/m^2', &
+         avgflag='A', long_name='deep peat phosphorus budget closure residual', &
+         ptr_col=this%peat_deep_reservoir_p_budget_residual_col, default='inactive')
 
     this%peat_deep_reservoir_turnover_c_col(begc:endc) = spval
     call hist_addfld1d (fname='PEAT_DEEP_RESERVOIR_TURNOVER_C', units='gC/m^2/s', &
@@ -1310,6 +1331,9 @@ contains
           this%peat_deep_reservoir_c_residual_col(c) = 0._r8
           this%peat_deep_reservoir_n_residual_col(c) = 0._r8
           this%peat_deep_reservoir_p_residual_col(c) = 0._r8
+          this%peat_deep_reservoir_c_budget_residual_col(c) = 0._r8
+          this%peat_deep_reservoir_n_budget_residual_col(c) = 0._r8
+          this%peat_deep_reservoir_p_budget_residual_col(c) = 0._r8
           this%peat_zwt_running_mean_col(c) = 0._r8
           this%peat_zwt_gs_deepest_col(c) = 0._r8
           this%peat_zwt_annual_low_col(c,1:5) = 0._r8

@@ -219,3 +219,44 @@ The reservoir conservation residuals at year 37 remained near machine
 precision, approximately `1e-26` for C, `1e-28` for N, and `1e-30` for P.
 This validates turnover activation, restart compatibility, and C/N/P
 conservation across the 36-year test sequence.
+
+## Restartable cumulative turnover accounting
+
+The cumulative turnover diagnostics are now also registered as restart state:
+
+```text
+peat_deep_reservoir_turnover_cumulative_c
+peat_deep_reservoir_turnover_cumulative_n
+peat_deep_reservoir_turnover_cumulative_p
+```
+
+These restart variables preserve the total C, N, and P released from the deep
+reservoir across continuation runs. If an older restart does not contain the
+variables, they are initialized to zero for backward compatibility.
+
+The corresponding history diagnostics are:
+
+```text
+PEAT_DEEP_RESERVOIR_TURNOVER_CUMULATIVE_C
+PEAT_DEEP_RESERVOIR_TURNOVER_CUMULATIVE_N
+PEAT_DEEP_RESERVOIR_TURNOVER_CUMULATIVE_P
+```
+
+### Restart validation
+
+The Pathfinder turnover case was rebuilt with the restartable counters and run
+for 18 years, followed by an 18-year continuation. The restart files at years
+19 and 37 both contained all three cumulative state variables. Representative
+values increased as follows:
+
+```text
+                         year 19             year 37
+C cumulative release     3.73e-12 gC/m2      8.41e-11 gC/m2
+N cumulative release     9.40e-14 gN/m2      2.27e-12 gN/m2
+P cumulative release     3.39e-15 gP/m2      7.55e-14 gP/m2
+```
+
+The increase across the restart confirms that cumulative turnover state was
+read from the year-19 restart and continued accumulating through year 37.
+History and restart values need not match exactly because they are written at
+different points in the model timestep.

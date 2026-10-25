@@ -350,6 +350,9 @@ contains
     real(r8) :: deep_reservoir_c_residual(num_soilc)
     real(r8) :: deep_reservoir_n_residual(num_soilc)
     real(r8) :: deep_reservoir_p_residual(num_soilc)
+    real(r8) :: deep_reservoir_c_budget_residual(num_soilc)
+    real(r8) :: deep_reservoir_n_budget_residual(num_soilc)
+    real(r8) :: deep_reservoir_p_budget_residual(num_soilc)
     !-----------------------------------------------------------------------
 
 
@@ -397,6 +400,9 @@ contains
          peat_deep_reservoir_c_residual_diag => cnstate_vars%peat_deep_reservoir_c_residual_col, &
          peat_deep_reservoir_n_residual_diag => cnstate_vars%peat_deep_reservoir_n_residual_col, &
          peat_deep_reservoir_p_residual_diag => cnstate_vars%peat_deep_reservoir_p_residual_col, &
+         peat_deep_reservoir_c_budget_residual_diag => cnstate_vars%peat_deep_reservoir_c_budget_residual_col, &
+         peat_deep_reservoir_n_budget_residual_diag => cnstate_vars%peat_deep_reservoir_n_budget_residual_col, &
+         peat_deep_reservoir_p_budget_residual_diag => cnstate_vars%peat_deep_reservoir_p_budget_residual_col, &
          peat_zwt_running_mean => cnstate_vars%peat_zwt_running_mean_col, &
          peat_zwt_gs_deepest => cnstate_vars%peat_zwt_gs_deepest_col, &
          peat_zwt_annual_low => cnstate_vars%peat_zwt_annual_low_col, &
@@ -498,6 +504,9 @@ contains
          deep_reservoir_c_residual(fc) = 0._r8
          deep_reservoir_n_residual(fc) = 0._r8
          deep_reservoir_p_residual(fc) = 0._r8
+         deep_reservoir_c_budget_residual(fc) = 0._r8
+         deep_reservoir_n_budget_residual(fc) = 0._r8
+         deep_reservoir_p_budget_residual(fc) = 0._r8
          if (peat_dynamic_column(fc)) then
             t = col_pp%topounit(c)
             if (top_pp%acrotelm_depth(t) > 0._r8) then
@@ -896,6 +905,8 @@ contains
                         !$acc atomic update
                         peat_deep_reservoir_turnover_cumulative_c_diag(c) = &
                              peat_deep_reservoir_turnover_cumulative_c_diag(c) + peat_deep_reservoir_release
+                        !$acc atomic update
+                        deep_reservoir_c_budget_residual(fc) = deep_reservoir_c_budget_residual(fc) + peat_deep_reservoir_release
                      case (2)
                         peat_deep_reservoir_release = peat_deep_reservoir_n(c,s) * &
                              peat_deep_reservoir_turnover_fraction
@@ -907,6 +918,8 @@ contains
                         !$acc atomic update
                         peat_deep_reservoir_turnover_cumulative_n_diag(c) = &
                              peat_deep_reservoir_turnover_cumulative_n_diag(c) + peat_deep_reservoir_release
+                        !$acc atomic update
+                        deep_reservoir_n_budget_residual(fc) = deep_reservoir_n_budget_residual(fc) + peat_deep_reservoir_release
                      case (3)
                         peat_deep_reservoir_release = peat_deep_reservoir_p(c,s) * &
                              peat_deep_reservoir_turnover_fraction
@@ -918,6 +931,8 @@ contains
                         !$acc atomic update
                         peat_deep_reservoir_turnover_cumulative_p_diag(c) = &
                              peat_deep_reservoir_turnover_cumulative_p_diag(c) + peat_deep_reservoir_release
+                        !$acc atomic update
+                        deep_reservoir_p_budget_residual(fc) = deep_reservoir_p_budget_residual(fc) + peat_deep_reservoir_release
                      case (4)
                         if (use_c13) then
                            peat_deep_reservoir_release = peat_deep_reservoir_c13(c,s) * &
@@ -1145,6 +1160,9 @@ contains
                            !$acc atomic update
                            deep_reservoir_c_residual(fc) = deep_reservoir_c_residual(fc) + &
                                 peat_deep_reservoir_c(c,s) - peat_deep_reservoir_old - peat_deep_reservoir_increment
+                           !$acc atomic update
+                           deep_reservoir_c_budget_residual(fc) = deep_reservoir_c_budget_residual(fc) + &
+                                peat_deep_reservoir_c(c,s) - peat_deep_reservoir_old - peat_deep_reservoir_increment
                            peat_deep_boundary_c_flux_diag(c) = peat_deep_boundary_c_flux_diag(c) + &
                                 peat_deep_reservoir_increment / dtime_mod
                         case (2)
@@ -1153,6 +1171,9 @@ contains
                            !$acc atomic update
                            deep_reservoir_n_residual(fc) = deep_reservoir_n_residual(fc) + &
                                 peat_deep_reservoir_n(c,s) - peat_deep_reservoir_old - peat_deep_reservoir_increment
+                           !$acc atomic update
+                           deep_reservoir_n_budget_residual(fc) = deep_reservoir_n_budget_residual(fc) + &
+                                peat_deep_reservoir_n(c,s) - peat_deep_reservoir_old - peat_deep_reservoir_increment
                            peat_deep_boundary_n_flux_diag(c) = peat_deep_boundary_n_flux_diag(c) + &
                                 peat_deep_reservoir_increment / dtime_mod
                         case (3)
@@ -1160,6 +1181,9 @@ contains
                            peat_deep_reservoir_p(c,s) = peat_deep_reservoir_p(c,s) + peat_deep_reservoir_increment
                            !$acc atomic update
                            deep_reservoir_p_residual(fc) = deep_reservoir_p_residual(fc) + &
+                                peat_deep_reservoir_p(c,s) - peat_deep_reservoir_old - peat_deep_reservoir_increment
+                           !$acc atomic update
+                           deep_reservoir_p_budget_residual(fc) = deep_reservoir_p_budget_residual(fc) + &
                                 peat_deep_reservoir_p(c,s) - peat_deep_reservoir_old - peat_deep_reservoir_increment
                            peat_deep_boundary_p_flux_diag(c) = peat_deep_boundary_p_flux_diag(c) + &
                                 peat_deep_reservoir_increment / dtime_mod
@@ -1269,6 +1293,9 @@ contains
             peat_deep_reservoir_c_residual_diag(c) = deep_reservoir_c_residual(fc)
             peat_deep_reservoir_n_residual_diag(c) = deep_reservoir_n_residual(fc)
             peat_deep_reservoir_p_residual_diag(c) = deep_reservoir_p_residual(fc)
+            peat_deep_reservoir_c_budget_residual_diag(c) = deep_reservoir_c_budget_residual(fc)
+            peat_deep_reservoir_n_budget_residual_diag(c) = deep_reservoir_n_budget_residual(fc)
+            peat_deep_reservoir_p_budget_residual_diag(c) = deep_reservoir_p_budget_residual(fc)
             if (use_c13) then
                peat_deep_reservoir_c13_diag(c) = sum(peat_deep_reservoir_c13(c,1:ndecomp_pools))
             else
